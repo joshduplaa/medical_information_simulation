@@ -60,3 +60,33 @@ test("faculty pages have no automated WCAG violations", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Add a faculty member" })).toBeVisible();
   await expectNoViolations(page, "account");
 });
+
+test("keyboard only: sign in, skip to content, and reach the main navigation", async ({ page }) => {
+  await page.goto("/login");
+  // The username field is focused on load; fill both fields and submit with Enter, no mouse.
+  await expect(page.getByLabel("Username or email")).toBeFocused();
+  await page.keyboard.type("student");
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("Password")).toBeFocused();
+  await page.keyboard.type("Student123!");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: /Welcome/ })).toBeVisible();
+
+  // First Tab lands on the skip link, which becomes visible and moves focus to <main>.
+  await page.keyboard.press("Tab");
+  const skip = page.getByRole("link", { name: "Skip to content" });
+  await expect(skip).toBeFocused();
+  await expect(skip).toBeInViewport();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("main#main")).toBeFocused();
+
+  // Tabbing from the top reaches the sidebar links in order.
+  await page.goto("/");
+  const labels: string[] = [];
+  for (let i = 0; i < 8 && labels.length < 4; i++) {
+    await page.keyboard.press("Tab");
+    const name = await page.evaluate(() => (document.activeElement?.closest("nav[aria-label=Main]") ? document.activeElement.textContent?.trim() : null));
+    if (name) labels.push(name);
+  }
+  expect(labels).toEqual(["Dashboard", "Order QC", "My QC runs", "Gradebook"]);
+});

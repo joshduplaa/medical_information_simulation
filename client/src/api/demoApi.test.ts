@@ -59,6 +59,26 @@ describe("demo API", () => {
     expect(lj[0].points).toHaveLength(1);
   });
 
+  it("return → correct → resubmit mirrors the server's workflow rules", async () => {
+    await as("faculty");
+    const lot = await api.createLot(lotDraft("DEMO-LIPID-02"));
+    await as("student");
+    const run = await api.orderRun(lot.adminQCLotID);
+    await api.saveResults(run.reportID, [{ analyteID: lot.analytes[0].analyteID, analyteValue: 260 }]);
+    await api.submitRun(run.reportID);
+
+    await as("faculty");
+    await expect(api.returnRun(run.reportID, "  ")).rejects.toMatchObject({ status: 400 }); // feedback required
+    const returned = await api.returnRun(run.reportID, "CHOL is +6 SD; check the entry.");
+    expect(returned).toMatchObject({ status: "Returned", facultyComment: "CHOL is +6 SD; check the entry." });
+    await expect(api.gradeRun(run.reportID, 80)).rejects.toMatchObject({ status: 409 }); // can't grade a returned run
+
+    await as("student");
+    await api.saveResults(run.reportID, [{ analyteID: lot.analytes[0].analyteID, analyteValue: 206 }]);
+    expect((await api.submitRun(run.reportID)).status).toBe("Submitted");
+    await expect(api.discardRun(run.reportID)).rejects.toMatchObject({ status: 409 }); // only drafts can be discarded
+  });
+
   it("enforces roles and ownership like the server", async () => {
     await as("student");
     await expect(api.createLot(lotDraft("DEMO-NOPE-001"))).rejects.toMatchObject({ status: 403 });
