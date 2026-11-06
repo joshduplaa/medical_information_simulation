@@ -97,12 +97,15 @@ flowchart LR
   - The normal build uses HTTP. The demo build swaps in an in-browser implementation that applies the same
     workflow rules to synthetic data, so the demo can be hosted as static files for free.
 - **Tests**:
-  - 32 API tests (xUnit + `WebApplicationFactory` over in-memory SQLite).
-  - 35 client unit tests (Vitest + Testing Library).
-  - 3 Playwright end-to-end tests: the full faculty→student→faculty loop against the real API, auth errors and role
-    guards, and the demo build.
-  - GitHub Actions runs all of them on every push (`.github/workflows/ci.yml`). There is no deploy step and no
-    secrets.
+  - 34 API tests (xUnit + `WebApplicationFactory` over in-memory SQLite).
+  - 41 client unit tests (Vitest + Testing Library).
+  - 8 Playwright end-to-end tests:
+    - the full faculty→student→faculty loop against the real API;
+    - auth errors and role guards, and faculty account creation;
+    - the demo build;
+    - an axe WCAG 2.1 AA scan of every page, and a keyboard-only walkthrough.
+  - GitHub Actions runs all of them on every push, plus a job that builds and smoke-tests the Docker stack
+    (`.github/workflows/ci.yml`). There is no deploy step and no secrets.
 
 ## Run it locally
 

@@ -71,15 +71,26 @@ See `docs/PLAN.md` for findings and the plan.
 - 17:41 Checked the print/PDF view (Chromium `page.pdf`): nav hidden, each analyte's chart plus data table on its own page. No change needed.
 - 17:42 `ff5d259`: demo return/resubmit parity test and a keyboard-only E2E test.
 
+### 17:43–17:58 — Backlog round 2
+- 17:43 `023206a`: HANDOFF.md.
+- 17:44 `0e54b5c`: the lot editor warns and requires acknowledgment before changing mean/SD on a lot with runs.
+- 17:46 `07d317b`: per-IP rate limit on sign-in and sign-up (429 ProblemDetails, Retry-After). Verified with curl: 20 × 401, then 429.
+- 17:48 `6518c00`: CSP and Permissions-Policy on the hosted demo. Verified with `firebase serve` and live: specs pass, no CSP violations.
+- 17:49 CI note: frequent pushes cancelled in-progress runs (concurrency group). I let 6518c00 run to completion: all jobs green. After that I batched pushes.
+- 17:51 `88273bb`: lazy-loaded the run page and lot editor. Initial JS went from 289 to 179 kB gzipped.
+- 17:54 `86130a0`: `docker compose --profile full up` runs the whole stack, plus a CI job that builds and smoke-tests it. Verified locally (full walkthrough on :8080) and on CI (all 4 jobs green, run 42146881162).
+- 17:57 `1d9ebaa`: the review queue is now FIFO. Screenshots recaptured from the Docker stack with a fresh seed.
+- 17:58 Redeployed the demo. Verified live: bundle hash matches, 5 demo/a11y specs pass, no CSP violations.
+
 ## Backlog (prioritized)
 
 Done: redeploy demo · faculty creation UI · axe a11y pass · 375 px pass · return/resubmit and keyboard tests.
 
-1. HANDOFF.md.
-2. Warn when editing mean/SD on a lot that already has runs (it re-scores history).
-3. Rate-limit the auth endpoints (built-in ASP.NET Core rate limiter), on top of the lockout.
-4. Content-Security-Policy on the hosted demo (firebase.json), verified against the live site.
-5. Route-level code splitting so Recharts only loads on the run page.
-6. One-command full stack: `docker compose --profile full up` (API container plus client).
-7. Lot target versioning. Larger; document only.
-8. Server-side Westgard evaluation if rules ever gate submission. Document only.
+Round 2 done: HANDOFF · re-score warning · auth rate limit · CSP · code splitting · Docker full stack · FIFO queue.
+
+Remaining (not started; documented as gaps):
+1. Lot target versioning (store the targets in force on each result). Larger; needs a migration and per-point chart limits.
+2. Server-side Westgard evaluation if rules ever gate submission.
+3. Password reset / email.
+
+Next: portfolio (Milestone 9). Started at 17:59, ahead of the 20:53 cutoff, because the backlog ran out.

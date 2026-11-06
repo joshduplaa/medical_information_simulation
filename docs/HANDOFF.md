@@ -27,6 +27,9 @@ current. The work log is [WORKLOG.md](WORKLOG.md).
 | WCAG 2.1 AA automated scan on every page; keyboard-only sign-in, skip link, nav order | `e2e/a11y.spec.ts` |
 | No page-level horizontal scroll at 375 px | scripted check of all 16 pages (WORKLOG 17:40) |
 | Runs on SQL Server in Docker with migrations, or on SQLite | local dev used SQL Server; tests and CI use SQLite |
+| Whole stack with one command (`docker compose --profile full up`) | Playwright walkthrough against :8080; CI `docker` job |
+| Per-IP rate limit on sign-in/sign-up (429) | `SecurityTests`, curl against the dev API |
+| CSP on the hosted demo | demo and a11y specs pass on the live site with no CSP violations |
 
 ## How to resume
 
@@ -36,6 +39,9 @@ scripts/dev-setup.sh && docker compose up -d --wait
 (cd api/ScrumDumpsterMolecularDiagnostic && dotnet run --launch-profile http)   # :5029
 (cd client && npm ci && npm run dev)                                            # :5173
 ```
+
+Or, with only Docker: `scripts/dev-setup.sh --docker-only && docker compose --profile full up -d --build --wait`
+(client at http://localhost:8080).
 
 To wipe the dev database and reseed: `docker compose down -v && docker compose up -d --wait`, then restart the API.
 .NET was installed at user level to `~/.dotnet` (not on the system PATH). Run `export PATH=$HOME/.dotnet:$PATH`

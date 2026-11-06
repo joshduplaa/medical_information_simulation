@@ -73,6 +73,13 @@ current time as a parameter. Illegal transitions return a message that the contr
 each rule a one-line unit test. The HTTP tests then cover the whole loop through `WebApplicationFactory` over
 in-memory SQLite.
 
+**7. Accessibility found real bugs.** An axe scan in E2E caught MUI's default warning orange and info blue failing
+4.5:1 contrast, and nav links placed directly inside a `<ul>`. A scripted 375 px check found that the visually-hidden
+table headers (`position: absolute`) escaped their scroll containers and made every table page 774 px wide. One
+`position: relative` on the table container fixed every page.
+*Talking point:* automated checks are a floor, not a ceiling. Axe can't read SVG text, so I checked the chart
+labels' contrast by hand.
+
 ## QC domain cheat sheet
 
 - **z-score** = (x − mean) / SD, using the lot's established mean and SD, not the student's own data.
@@ -87,7 +94,10 @@ in-memory SQLite.
 
 ## Numbers you can quote (as of the `finish-mis` branch)
 
-- 32 API tests, 35 client unit tests, 3 Playwright E2E tests, all run in GitHub Actions on every push.
+- 34 API tests, 41 client unit tests, 8 Playwright E2E tests (including an axe WCAG 2.1 AA scan of every page
+  and a keyboard-only test). All run in GitHub Actions on every push, plus a job that builds and smoke-tests the
+  Docker stack.
+- Initial JS cut from 289 kB to 179 kB gzipped by lazy-loading the chart page.
 - 0 TypeScript errors (down from 107) and a clean ESLint run.
 - 794 tracked files on `main` → the cleanup removed snapshots, a 75 MB zip and tracked build output.
 
