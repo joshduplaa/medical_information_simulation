@@ -87,3 +87,23 @@ jobs:
           name: playwright-report
           path: client/playwright-report
           retention-days: 7
+
+  docker:
+    name: Docker full stack (build + smoke test)
+    needs: [api, client]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Throwaway SA password and JWT key generated on the runner; nothing is pushed anywhere.
+      - run: scripts/dev-setup.sh --docker-only
+      - run: docker compose --profile full up -d --build --wait --wait-timeout 300
+      - name: Smoke test
+        run: |
+          curl -fsS http://localhost:5029/api/health
+          curl -fsS http://localhost:8080/ | grep -q "<title>MIS"
+          curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost:8080/runs/deep-link | grep -q 200
+          token=$(curl -fsS -X POST http://localhost:5029/api/Auth/Login -H 'content-type: application/json' \
+            -d '{"username":"faculty","password":"Faculty123!"}' | jq -r .jwtToken)
+          curl -fsS http://localhost:5029/api/AdminQCLots -H "Authorization: Bearer $token" | jq -e 'length > 0'
+      - if: failure()
+        run: docker compose --profile full logs --tail 200

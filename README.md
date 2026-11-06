@@ -106,6 +106,16 @@ flowchart LR
 
 ## Run it locally
 
+**Option A: everything in Docker (one command).** Needs only Docker and bash.
+
+```bash
+scripts/dev-setup.sh --docker-only     # writes .env with a random SA password and JWT key (no .NET needed)
+docker compose --profile full up -d --build --wait
+# client: http://localhost:8080 · API: http://localhost:5029 (Swagger at /swagger)
+```
+
+**Option B: run the API and client on the host** (for development, with hot reload).
+
 Prerequisites: .NET 8 SDK, Node 22 (what CI uses), and Docker (optional; SQLite works without it).
 
 ```bash

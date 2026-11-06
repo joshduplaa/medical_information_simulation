@@ -127,5 +127,11 @@ honest.
 logged in with access, which the brief allowed. The deploy was verified by running the demo Playwright spec against
 the live URL.
 
+**D21a. A Compose profile runs the whole stack with one command.** `docker compose --profile full up` builds the API
+image (SDK build stage, then the non-root `aspnet` runtime) and the client (Vite build served by nginx with an SPA
+fallback). Reviewers and teammates need only Docker. CI builds and boots it and smoke-tests login and a protected
+endpoint, so the Dockerfiles can't silently rot. The API runs with `ASPNETCORE_ENVIRONMENT=Development` in this
+profile, so it seeds the synthetic data. It is a local profile, not a production deployment.
+
 **D22. CI has no deploy step and no secrets.** The API tests use a fixed test-only key set in the test factory. The
 E2E API script generates a throwaway key per run. Deploys stay a deliberate human action.
