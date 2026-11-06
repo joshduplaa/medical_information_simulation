@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using ScrumDumpsterMolecularDiagnostic.Auth;
 using ScrumDumpsterMolecularDiagnostic.Models.DTO.Auth;
 using ScrumDumpsterMolecularDiagnostic.Repositories.Interfaces.Auth;
@@ -27,6 +28,7 @@ namespace ScrumDumpsterMolecularDiagnostic.Controllers.Auths
         /// <summary>Public self-registration. Always creates a Student account.</summary>
         [HttpPost("Register")]
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Auth)]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDTO requestDTO)
         {
             var result = await accountService.CreateAsync(requestDTO, Roles.Student);
@@ -48,6 +50,7 @@ namespace ScrumDumpsterMolecularDiagnostic.Controllers.Auths
         [HttpPost("Login")]
         [HttpPost("LoginByUsername")] // route used by the original client
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Auth)]
         public async Task<IActionResult> Login([FromBody] LoginRequestDTO loginDTO)
         {
             var user = loginDTO.Username.Contains('@')

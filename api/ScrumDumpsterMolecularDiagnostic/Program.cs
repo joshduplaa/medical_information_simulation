@@ -12,8 +12,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
@@ -139,6 +142,28 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
 });
 
+// Sign-in and sign-up are limited per client IP (fixed window), on top of Identity's per-account lockout: lockout
+// stops guessing one account's password, the limiter stops one client hammering many accounts or mass-registering.
+// Behind a reverse proxy, configure ForwardedHeaders so RemoteIpAddress is the real client.
+var authPermitsPerMinute = config.GetValue("RateLimit:AuthPermitsPerMinute", 20);
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(RateLimitPolicies.Auth, http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = authPermitsPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    options.OnRejected = async (context, token) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+            context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+        await context.HttpContext.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = StatusCodes.Status429TooManyRequests,
+            Title = "Too many sign-in attempts from this device. Wait a minute and try again.",
+        }, token);
+    };
+});
+
 var app = builder.Build();
 
 // ---------------------------------------------------------------------------
@@ -178,6 +203,7 @@ else
 }
 
 app.UseCors("Client");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -188,3 +214,9 @@ app.Run();
 
 /// <summary>Exposed so the integration tests can host the app with WebApplicationFactory.</summary>
 public partial class Program { }
+
+/// <summary>Named rate-limiter policies.</summary>
+public static class RateLimitPolicies
+{
+    public const string Auth = "auth";
+}

@@ -24,8 +24,17 @@ public sealed class MisApiFactory : WebApplicationFactory<Program>
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
-    public MisApiFactory()
+    private readonly IReadOnlyDictionary<string, string> overrides;
+
+    public MisApiFactory() : this(new Dictionary<string, string>()) { }
+
+    /// <summary>A separate app instance with extra configuration for one test, e.g. a low rate limit.</summary>
+    public static MisApiFactory With(IReadOnlyDictionary<string, string> overrides) => new(overrides);
+
+    // Private: xUnit class fixtures must have exactly one public constructor.
+    private MisApiFactory(IReadOnlyDictionary<string, string> overrides)
     {
+        this.overrides = overrides;
         appKeepAlive = new SqliteConnection(AppCs);
         authKeepAlive = new SqliteConnection(AuthCs);
         appKeepAlive.Open();
@@ -46,6 +55,9 @@ public sealed class MisApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Jwt:Issuer", "mis-api");
         builder.UseSetting("Jwt:Audience", "mis-client");
         builder.UseSetting("Seed:Enabled", "true");
+        // Every test request shares one client address, so lift the per-IP auth limit unless a test sets it.
+        builder.UseSetting("RateLimit:AuthPermitsPerMinute", "100000");
+        foreach (var (key, value) in overrides) builder.UseSetting(key, value);
     }
 
     public async Task<HttpClient> ClientFor(string username, string password)

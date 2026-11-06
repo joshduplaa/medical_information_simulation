@@ -132,4 +132,24 @@ public class SecurityTests : IClassFixture<MisApiFactory>
         var all = await (await faculty.GetAsync("/api/AdminQCLots")).Content.ReadFromJsonAsync<JsonElement>();
         Assert.Contains(all.EnumerateArray(), l => !l.GetProperty("isActive").GetBoolean());
     }
+
+    [Fact]
+    public async Task Sign_in_is_rate_limited_per_client_with_a_problem_details_429()
+    {
+        using var limited = MisApiFactory.With(new Dictionary<string, string> { ["RateLimit:AuthPermitsPerMinute"] = "3" });
+        var client = limited.CreateClient();
+        for (var i = 0; i < 3; i++)
+        {
+            var ok = await client.PostAsJsonAsync("/api/Auth/Login", new { username = "student", password = "wrong-password" });
+            Assert.Equal(HttpStatusCode.Unauthorized, ok.StatusCode);
+        }
+        var blocked = await client.PostAsJsonAsync("/api/Auth/Login", new { username = "student", password = "Student123!" });
+        Assert.Equal((HttpStatusCode)429, blocked.StatusCode);
+        Assert.True(blocked.Headers.RetryAfter is not null);
+        var body = await blocked.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Contains("Too many sign-in attempts", body.GetProperty("title").GetString());
+
+        // Other endpoints are not affected by the auth limiter.
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/health")).StatusCode);
+    }
 }

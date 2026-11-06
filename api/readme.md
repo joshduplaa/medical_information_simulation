@@ -17,6 +17,7 @@ ASP.NET Core 8 Web API for Medical Information Simulation. See the [root README]
 | `ConnectionStrings:MedicalInformationConnectionString` / `...AuthConnectionString` | user-secrets / env | App data and Identity are separate databases. |
 | `Database:Provider` | user-secrets / env | `SqlServer` (applies migrations on startup) or `Sqlite` (creates the schema; used by tests/CI). |
 | `Cors:AllowedOrigins` | `appsettings.Development.json` | The Vite dev (5173) and preview (4173) origins. |
+| `RateLimit:AuthPermitsPerMinute` | appsettings / env | Per-IP limit on login and register (default 20). Tests and E2E raise it. |
 | `Seed:Enabled` | defaults to true in Development | Seeds synthetic lots, students and runs into an empty database. |
 
 ## Endpoints (all under `/api`)

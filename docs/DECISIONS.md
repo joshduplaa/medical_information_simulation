@@ -71,6 +71,13 @@ other runs' IDs.
 ownership without another lookup, and the client can render the header without an extra request. Tokens last 8 hours
 (one lab session). There are no refresh tokens, which is acceptable for a teaching app.
 
+**D13a. Rate-limit sign-in and sign-up per client IP, in addition to the per-account lockout.** Lockout stops someone
+guessing one account's password, but not one client trying a password against many accounts, or mass registration.
+ASP.NET Core's built-in fixed-window limiter (20 per minute by default, configurable) returns 429 ProblemDetails
+with `Retry-After`.
+*Cost:* behind a proxy every client shares the proxy's IP, so forwarded headers must be configured before
+deploying.
+
 ## Workflow and QC
 
 **D14. All timestamps are UTC end to end, and EF tags every DateTime as UTC on read.**
