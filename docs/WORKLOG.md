@@ -63,12 +63,23 @@ See `docs/PLAN.md` for findings and the plan.
 
 ### 17:31 — DECISIONS.md, INTERVIEW_NOTES.md, this log
 
+### 17:30–17:42 — Backlog round 1
+- 17:31 Redeployed the demo with the date and rule fixes. The live bundle hash matches the local build, and the demo E2E passes against the live URL.
+- 17:34 `30dbedd`: faculty can create faculty accounts (Account page). Added a demo unit test and an E2E test against the real API.
+- 17:38 `195a124`: axe WCAG 2.1 AA scan of every core page. Fixed what it found: nav `<a>` directly inside `<ul>`; MUI default info/warning and the faculty-green contrast; chart label contrast (checked by hand, since axe skips SVG text).
+- 17:40 `1df95da`: all 16 pages checked at 375 px. `.sr-only` table headers were widening every table page to 774 px; fixed with one theme override. Added an API test for the lot-supersede rule the UI promises.
+- 17:41 Checked the print/PDF view (Chromium `page.pdf`): nav hidden, each analyte's chart plus data table on its own page. No change needed.
+- 17:42 `ff5d259`: demo return/resubmit parity test and a keyboard-only E2E test.
+
 ## Backlog (prioritized)
 
-1. ~~Redeploy the demo with today's fixes and re-verify live.~~
-2. Faculty account creation UI (the API endpoint exists).
-3. Accessibility pass: axe scan in E2E, keyboard-only walkthrough, chart color contrast.
-4. Mobile check of every page at 375 px (the dashboard and run page are already checked at 390 px).
-5. Test gaps: return → resubmit in E2E; demo API parity tests for grade/return; RequireRole unit test.
-6. Lot target versioning (editing mean/SD currently re-scores history). Larger; document only.
-7. Server-side Westgard evaluation if rules ever gate submission. Document only.
+Done: redeploy demo · faculty creation UI · axe a11y pass · 375 px pass · return/resubmit and keyboard tests.
+
+1. HANDOFF.md.
+2. Warn when editing mean/SD on a lot that already has runs (it re-scores history).
+3. Rate-limit the auth endpoints (built-in ASP.NET Core rate limiter), on top of the lockout.
+4. Content-Security-Policy on the hosted demo (firebase.json), verified against the live site.
+5. Route-level code splitting so Recharts only loads on the run page.
+6. One-command full stack: `docker compose --profile full up` (API container plus client).
+7. Lot target versioning. Larger; document only.
+8. Server-side Westgard evaluation if rules ever gate submission. Document only.
