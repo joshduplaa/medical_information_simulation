@@ -38,7 +38,7 @@ const FACULTY_NAV: NavItem[] = [
 export function DemoBanner() {
   if (!config.demoMode) return null;
   return (
-    <Alert severity="info" icon={false} sx={{ borderRadius: 0, justifyContent: "center", py: 0, "& .MuiAlert-message": { py: 0.75 } }} className="no-print">
+    <Alert severity="info" icon={false} role="note" sx={{ borderRadius: 0, justifyContent: "center", py: 0, "& .MuiAlert-message": { py: 0.75 } }} className="no-print">
       Demo mode — runs entirely in your browser with synthetic data. Nothing is sent to a server.
     </Alert>
   );

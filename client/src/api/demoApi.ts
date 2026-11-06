@@ -108,7 +108,7 @@ export function buildDemoState(now = Date.now()): State {
       reviewedDate: status === "Graded" || status === "Returned" ? iso(runMs + 5 * 3600e3) : null,
       analyteInputs: analytes.slice(0, count).map((a) => ({
         analyteID: a.analyteID, analyteName: a.analyteName,
-        analyteValue: round(a.mean + (gaussian() * 0.8 + (shifts[a.analyteName] ?? 0)) * a.stdDevi, a.stdDevi < 0.2 ? 2 : 1),
+        analyteValue: round(a.mean + (gaussian() * (a.analyteName in shifts ? 0.15 : 0.8) + (shifts[a.analyteName] ?? 0)) * a.stdDevi, a.stdDevi < 0.2 ? 2 : 1),
       })),
     });
   };

@@ -15,6 +15,7 @@ namespace ScrumDumpsterMolecularDiagnostic.Mappings
                 .ForMember(d => d.AnalyteID, o => o.Ignore())
                 .ForMember(d => d.AdminQCLotID, o => o.Ignore());
             CreateMap<AdminQCLot, AdminQCLotDTO>()
+                .ForMember(d => d.Analytes, o => o.MapFrom(s => s.Analytes.OrderBy(a => a.AnalyteName)))
                 .ForMember(d => d.ReportCount, o => o.MapFrom(s => s.Reports.Count));
             CreateMap<AnalyteInput, AnalyteInputDTO>();
             CreateMap<StudentReport, StudentReportDTO>()
@@ -22,7 +23,7 @@ namespace ScrumDumpsterMolecularDiagnostic.Mappings
                 .ForMember(d => d.QCName, o => o.MapFrom(s => s.AdminQCLot == null ? "" : s.AdminQCLot.QCName))
                 .ForMember(d => d.LotNumber, o => o.MapFrom(s => s.AdminQCLot == null ? "" : s.AdminQCLot.LotNumber))
                 .ForMember(d => d.Department, o => o.MapFrom(s => s.AdminQCLot == null ? default : s.AdminQCLot.Department))
-                .ForMember(d => d.Analytes, o => o.MapFrom(s => s.AdminQCLot == null ? new List<Analyte>() : s.AdminQCLot.Analytes));
+                .ForMember(d => d.Analytes, o => o.MapFrom(s => s.AdminQCLot == null ? new List<Analyte>() : s.AdminQCLot.Analytes.OrderBy(a => a.AnalyteName).ToList()));
         }
     }
 }

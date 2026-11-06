@@ -51,7 +51,7 @@ export default function LoginPage() {
         </Stack>
       </Box>
       {config.showDemoCredentials && (
-        <Alert severity="info" sx={{ mt: 3 }} icon={false}>
+        <Alert severity="info" sx={{ mt: 3 }} icon={false} role="note">
           <Typography variant="body2" fontWeight={600} gutterBottom>Synthetic demo accounts</Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             <Button size="small" variant="outlined" onClick={() => fill("faculty", "Faculty123!")}>Faculty: faculty / Faculty123!</Button>

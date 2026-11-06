@@ -160,7 +160,8 @@ namespace ScrumDumpsterMolecularDiagnostic.Data
             var count = (int)Math.Ceiling(analytes.Count * fractionEntered);
             foreach (var a in analytes.Take(count))
             {
-                var z = Gaussian(rng) * 0.8 + shiftsInSd.GetValueOrDefault(a.AnalyteName);
+                // Planted shifts use low noise so the intended Westgard rule reliably fires.
+                var z = shiftsInSd.TryGetValue(a.AnalyteName, out var shift) ? shift + Gaussian(rng) * 0.15 : Gaussian(rng) * 0.8;
                 var decimals = a.StdDevi < 0.2 ? 2 : 1;
                 report.AnalyteInputs.Add(new AnalyteInput
                 {

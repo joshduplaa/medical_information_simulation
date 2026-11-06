@@ -1,8 +1,11 @@
-import { Box, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { useState } from "react";
+import { Box, Button, Collapse, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { LjSeries } from "../api";
 import { evaluateSeries, formatZ, type QcStatus } from "../qc/westgard";
-import { formatDate, formatValue } from "./format";
+import { formatValue } from "./format";
+
+const shortDate = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 import { QcStatusChip } from "./StatusChip";
 
 const STATUS_COLOR: Record<QcStatus, string> = { ok: "#0F6FA8", warning: "#C77700", reject: "#C62828" };
@@ -29,7 +32,7 @@ export default function LeveyJenningsChart({ series, currentReportId }: { series
   const evaluated = evaluateSeries(points.map((p) => p.value), mean, sd);
   const data: ChartPoint[] = points.map((p, i) => ({
     index: i + 1,
-    label: formatDate(p.runDate),
+    label: shortDate.format(new Date(p.runDate)),
     value: p.value,
     z: evaluated[i].z,
     status: evaluated[i].status,
@@ -40,7 +43,8 @@ export default function LeveyJenningsChart({ series, currentReportId }: { series
   const maxAbsZ = Math.max(4, ...data.map((d) => Math.abs(d.z) + 0.5));
   const domain: [number, number] = [mean - maxAbsZ * sd, mean + maxAbsZ * sd];
   const titleId = `lj-${analyte.analyteID}`;
-  const latest = data.at(-1);
+  const current = data.find((d) => d.current) ?? data.at(-1);
+  const [showTable, setShowTable] = useState(false);
 
   return (
     <Paper sx={{ p: 2, breakInside: "avoid" }} component="section" aria-labelledby={titleId}>
@@ -53,7 +57,7 @@ export default function LeveyJenningsChart({ series, currentReportId }: { series
             Mean {formatValue(mean, sd)} {analyte.unitOfMeasure} · SD {sd} · {data.length} run{data.length === 1 ? "" : "s"}
           </Typography>
         </Box>
-        {latest && <QcStatusChip status={latest.status} rules={latest.rules} />}
+        {current && <QcStatusChip status={current.status} rules={current.rules} />}
       </Stack>
 
       {data.length === 0 ? (
@@ -103,6 +107,11 @@ export default function LeveyJenningsChart({ series, currentReportId }: { series
             </ResponsiveContainer>
           </Box>
 
+          <Button size="small" onClick={() => setShowTable((v) => !v)} aria-expanded={showTable} className="no-print" sx={{ mt: 1 }}>
+            {showTable ? "Hide data table" : "Show data table"}
+          </Button>
+          {/* The table stays mounted (collapsed) so screen readers and print always have the full data. */}
+          <Collapse in={showTable} className="lj-table">
           <Box sx={{ overflowX: "auto", mt: 1 }}>
             <Table size="small" aria-label={`${analyte.analyteName} results by run`}>
               <TableHead>
@@ -118,15 +127,16 @@ export default function LeveyJenningsChart({ series, currentReportId }: { series
                 {data.map((d) => (
                   <TableRow key={d.index} selected={d.current}>
                     <TableCell>{d.index}{d.current ? " (this run)" : ""}</TableCell>
-                    <TableCell>{d.label}</TableCell>
+                    <TableCell sx={{ whiteSpace: "nowrap" }}>{d.label}</TableCell>
                     <TableCell align="right">{formatValue(d.value, sd)}</TableCell>
-                    <TableCell align="right">{formatZ(d.z)}</TableCell>
+                    <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>{formatZ(d.z)}</TableCell>
                     <TableCell><QcStatusChip status={d.status} rules={d.rules} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </Box>
+          </Collapse>
         </>
       )}
     </Paper>

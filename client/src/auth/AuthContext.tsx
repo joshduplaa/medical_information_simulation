@@ -4,6 +4,8 @@ import { tokenStore } from "../api/tokenStore";
 
 interface AuthValue {
   user: UserProfile | null;
+  /** True after an explicit sign-out, so the next sign-in does not resume the previous user's page. */
+  signedOut: boolean;
   signIn(username: string, password: string): Promise<UserProfile>;
   signOut(): void;
 }
@@ -12,9 +14,11 @@ const AuthContext = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(() => tokenStore.load());
+  const [signedOut, setSignedOut] = useState(false);
 
   const signOut = useCallback(() => {
     tokenStore.clear();
+    setSignedOut(true);
     setSession(null);
   }, []);
 
@@ -29,11 +33,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (username: string, password: string) => {
     const next = await api.login(username, password);
     tokenStore.save(next);
+    setSignedOut(false);
     setSession(next);
     return next.user;
   }, []);
 
-  const value = useMemo<AuthValue>(() => ({ user: session?.user ?? null, signIn, signOut }), [session, signIn, signOut]);
+  const value = useMemo<AuthValue>(() => ({ user: session?.user ?? null, signedOut, signIn, signOut }), [session, signedOut, signIn, signOut]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

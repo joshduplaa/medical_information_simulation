@@ -320,7 +320,7 @@ export default function RunPage() {
         {series && (
           <Grid container spacing={2}>
             {series.map((s) => (
-              <Grid key={s.analyte.analyteID} size={{ xs: 12, lg: 6 }}>
+              <Grid key={s.analyte.analyteID} size={{ xs: 12 }}>
                 <LeveyJenningsChart series={s} currentReportId={report.reportID} />
               </Grid>
             ))}

@@ -13,4 +13,5 @@
   body { background: #fff !important; }
   main { padding: 0 !important; max-width: none !important; }
   .MuiPaper-root { break-inside: avoid; }
+  .lj-table { height: auto !important; visibility: visible !important; }
 }
