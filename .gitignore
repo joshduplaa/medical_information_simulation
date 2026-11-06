@@ -28,6 +28,7 @@ firebase-debug.log
 .env.*
 !.env.example
 !.env.*.example
+!client/.env.demo
 appsettings.*.local.json
 
 # --- Uploaded files written by the API at runtime ---
