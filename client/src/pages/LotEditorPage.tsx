@@ -12,8 +12,10 @@ import { departmentLabel } from "../components/format";
 import PageHeader from "./PageHeader";
 import { validateLotDraft } from "../lib/lotValidation";
 
-const today = () => new Date().toISOString().slice(0, 10);
-const plusDays = (n: number) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+/** The viewer's local calendar date as YYYY-MM-DD (toISOString would give tomorrow's date on a US evening). */
+const localDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const today = () => localDate(new Date());
+const plusDays = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return localDate(d); };
 
 const blankAnalyte = (): AnalyteDraft => ({ analyteName: "", analyteAcronym: "", unitOfMeasure: "", mean: NaN, stdDevi: NaN, minLevel: NaN, maxLevel: NaN });
 

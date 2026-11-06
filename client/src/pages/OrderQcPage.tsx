@@ -4,7 +4,7 @@ import { Alert, Box, Button, Card, CardActions, CardContent, Chip, Grid2 as Grid
 import { api, type QcLot } from "../api";
 import { EmptyState, ErrorState, Loading } from "../components/PageState";
 import { useAsync } from "../components/useAsync";
-import { departmentLabel, formatDate } from "../components/format";
+import { departmentLabel, formatCalendarDate } from "../components/format";
 import PageHeader from "./PageHeader";
 
 export default function OrderQcPage() {
@@ -42,7 +42,7 @@ export default function OrderQcPage() {
                 <Chip size="small" label={departmentLabel(lot.department)} sx={{ mb: 1 }} />
                 <Typography variant="h3" component="h2">{lot.qcName}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Lot {lot.lotNumber} · expires {formatDate(lot.expirationDate)}
+                  Lot {lot.lotNumber} · expires {formatCalendarDate(lot.expirationDate)}
                 </Typography>
                 <Stack direction="row" gap={0.5} flexWrap="wrap">
                   {lot.analytes.map((a) => <Chip key={a.analyteID} size="small" variant="outlined" label={a.analyteAcronym} title={a.analyteName} />)}

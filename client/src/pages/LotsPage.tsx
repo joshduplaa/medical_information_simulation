@@ -9,7 +9,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { api, type QcLot } from "../api";
 import { EmptyState, ErrorState, Loading } from "../components/PageState";
 import { useAsync } from "../components/useAsync";
-import { departmentLabel, formatDate } from "../components/format";
+import { departmentLabel, formatCalendarDate } from "../components/format";
 import PageHeader from "./PageHeader";
 
 export default function LotsPage() {
@@ -66,7 +66,7 @@ export default function LotsPage() {
                     <TableCell sx={{ fontFamily: "monospace" }}>{lot.lotNumber}</TableCell>
                     <TableCell>{departmentLabel(lot.department)}</TableCell>
                     <TableCell align="right">{lot.analytes.length}</TableCell>
-                    <TableCell>{formatDate(lot.expirationDate)}</TableCell>
+                    <TableCell>{formatCalendarDate(lot.expirationDate)}</TableCell>
                     <TableCell>
                       {lot.isActive && !expired ? <Chip size="small" color="success" label="Active" />
                         : expired ? <Chip size="small" color="warning" label="Expired" variant="outlined" />
