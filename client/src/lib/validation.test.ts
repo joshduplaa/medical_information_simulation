@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { changedTargets, validateLotDraft } from "./lotValidation";
 import { passwordProblem } from "./password";
 import { summarize } from "./gradebook";
+import { oldestSubmittedFirst } from "./reviewQueue";
 import type { LotDraft, Report } from "../api";
 
 const good: LotDraft = {
@@ -67,5 +68,14 @@ describe("changedTargets", () => {
 
   it("ignores a field that is mid-edit (blank)", () => {
     expect(changedTargets(saved, withNa(NaN, 1.5))).toEqual([]);
+  });
+});
+
+describe("oldestSubmittedFirst", () => {
+  it("orders the review queue by submission time, oldest first, without mutating the input", () => {
+    const run = (id: string, submittedDate: string | null, runDate: string) => ({ reportID: id, submittedDate, runDate }) as Report;
+    const input = [run("new", "2026-11-05T16:00:00Z", "2026-11-05T15:00:00Z"), run("old", "2026-11-02T16:00:00Z", "2026-11-02T15:00:00Z"), run("mid", null, "2026-11-03T15:00:00Z")];
+    expect(oldestSubmittedFirst(input).map((r) => r.reportID)).toEqual(["old", "mid", "new"]);
+    expect(input[0].reportID).toBe("new");
   });
 });
