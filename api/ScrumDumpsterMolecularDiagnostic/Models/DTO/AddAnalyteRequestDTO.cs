@@ -1,15 +1,7 @@
-﻿namespace ScrumDumpsterMolecularDiagnostic.Models.DTO
+namespace ScrumDumpsterMolecularDiagnostic.Models.DTO
 {
-    public class AddAnalyteRequestDTO
+    /// <summary>Adds a single analyte to an existing lot (POST api/Analytes/{lotId}).</summary>
+    public class AddAnalyteRequestDTO : AddAnalyteWithListDTO
     {
-        public string AnalyteName { get; set; }
-        public string AnalyteAcronym { get; set; }
-        public string UnitOfMeasure { get; set; }
-        public float MinLevel { get; set; }
-        public float MaxLevel { get; set; }
-        public float Mean { get; set; }
-        public float StdDevi { get; set; }
-        public bool Electrolyte { get; set; }
-        public Guid AdminQCLotID { get; set; }
     }
 }

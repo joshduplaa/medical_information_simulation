@@ -5,142 +5,186 @@ using ScrumDumpsterMolecularDiagnostic.Repositories.Interfaces.Auth;
 using ScrumDumpsterMolecularDiagnostic.Repositories.LocalImplementation;
 using ScrumDumpsterMolecularDiagnostic.Repositories.SQLImplementation;
 using ScrumDumpsterMolecularDiagnostic.Repositories.SQLImplementation.Auth;
+using ScrumDumpsterMolecularDiagnostic.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
-//dotnet new webapi -n ScrumDumpsterMolecularDiagnostic
-// Add controllers for handling API requests
-builder.Services.AddControllers();
+var config = builder.Configuration;
 
-// Adds HttpContextAccessor for accessing HTTP context in other services
+// ---------------------------------------------------------------------------
+// Configuration checks. Fail fast with an actionable message instead of a
+// NullReferenceException deep inside JWT validation.
+// ---------------------------------------------------------------------------
+var jwtKey = config["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key is missing or shorter than 32 bytes. Run scripts/dev-setup.sh (which stores a random key in " +
+        "dotnet user-secrets) or set the environment variable Jwt__Key. Keys are never committed to the repo.");
+}
+
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton(TimeProvider.System);
 
-// Adds Swagger for API documentation and testing
-builder.Services.AddEndpointsApiExplorer(); //Enables minimal API endpoint discovery for Swagger.
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "MIS API", Version = "v1" });
-
-    // Adds JWT-based security definition for Swagger
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "MIS API", Version = "v1", Description = "Medical Information Simulation — educational LIS simulation. Not for clinical use." });
     options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
     {
         Name = "Authorization",
         In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = JwtBearerDefaults.AuthenticationScheme
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
     });
-
-    // Adds JWT security requirements to Swagger documentation
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = JwtBearerDefaults.AuthenticationScheme
-                },
-                Scheme = "Oauth2",
-                Name = JwtBearerDefaults.AuthenticationScheme,
-                In = ParameterLocation.Header
-            },
+            new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = JwtBearerDefaults.AuthenticationScheme } },
             new List<string>()
         }
     });
 });
 
-// Configure the primary database context for application data
-builder.Services.AddDbContext<MedicalInformationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("MedicalInformationConnectionString")));
+// ---------------------------------------------------------------------------
+// Database. Database:Provider selects SqlServer (default; Docker locally) or
+// Sqlite (tests, CI, and machines without Docker). Both contexts use the same
+// provider; each has its own connection string / database.
+// ---------------------------------------------------------------------------
+var provider = config["Database:Provider"] ?? "SqlServer";
+var isSqlite = provider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase);
 
-// Configure a secondary database context for authentication data
-builder.Services.AddDbContext<MedicalInformationAuthDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("MedicalInformationAuthConnectionString")));
+void ConfigureDb(DbContextOptionsBuilder options, string connectionName)
+{
+    var connectionString = config.GetConnectionString(connectionName)
+        ?? throw new InvalidOperationException($"ConnectionStrings:{connectionName} is not configured. See api/README.md.");
+    if (isSqlite) options.UseSqlite(connectionString);
+    else options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure(5));
+}
 
-// Configure CORS policy to only allow requests from the React client running on http://localhost:5173
+builder.Services.AddDbContext<MedicalInformationDbContext>(o => ConfigureDb(o, "MedicalInformationConnectionString"));
+builder.Services.AddDbContext<MedicalInformationAuthDbContext>(o => ConfigureDb(o, "MedicalInformationAuthConnectionString"));
+
+// ---------------------------------------------------------------------------
+// CORS. Allowed origins come from config (Cors:AllowedOrigins). The previous
+// hard-coded http://localhost:3000 did not match the client's dev port.
+// ---------------------------------------------------------------------------
+var allowedOrigins = config.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173"];
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowSpecificOrigin",
-                      policy =>
-                      {
-                          policy.WithOrigins("http://localhost:3000") // Allowed client origin
-                                .AllowAnyHeader() // Allow all headers
-                                .AllowAnyMethod(); // Allow all HTTP methods (GET, POST, etc.)
-                      });
+    options.AddPolicy("Client", policy => policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod());
 });
 
-// Dependency Injection (DI) for application repositories and services
+// Repositories (original repository pattern kept) and services
 builder.Services.AddScoped<IAdminRepository, SQLAdminRepository>();
 builder.Services.AddScoped<IStudentRepository, SQLStudentRepository>();
 builder.Services.AddScoped<IAdminQCLotRepository, SQLAdminQCLotRepository>();
 builder.Services.AddScoped<IAnalyteRepository, SQLAnalyteRepository>();
+builder.Services.AddScoped<IStudentReportRepository, SQLStudentReportRepository>();
 builder.Services.AddScoped<IImageRepository, LocalImageRepository>();
-builder.Services.AddScoped<ITokenRepository, TokenRepository>(); // Token repository for managing JWT tokens
+builder.Services.AddScoped<ITokenRepository, TokenRepository>();
+builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<DbSeeder>();
 
-// Configure AutoMapper for mapping between entities and DTOs
 builder.Services.AddAutoMapper(typeof(AutoMapperProfiles));
 
-// Configure ASP.NET Identity for authentication and authorization
 builder.Services.AddIdentityCore<IdentityUser>()
-    .AddRoles<IdentityRole>() // Role-based authorization
+    .AddRoles<IdentityRole>()
     .AddTokenProvider<DataProtectorTokenProvider<IdentityUser>>("MedicalInformationSimulation")
-    .AddEntityFrameworkStores<MedicalInformationAuthDbContext>() // Store user data in Auth database
+    .AddEntityFrameworkStores<MedicalInformationAuthDbContext>()
     .AddDefaultTokenProviders();
 
-// Configure Identity password policy
 builder.Services.Configure<IdentityOptions>(options =>
 {
-    options.Password.RequireDigit = true; // Require at least one digit in password
-    options.Password.RequireLowercase = true; // Require at least one lowercase letter
-    options.Password.RequireUppercase = true; // Require at least one uppercase letter
-    options.Password.RequireNonAlphanumeric = false; // Non-alphanumeric not required
-    options.Password.RequiredLength = 8; // Minimum password length
-    options.Password.RequiredUniqueChars = 1; // At least one unique character
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 8;
+    options.Password.RequiredUniqueChars = 1;
+    options.User.RequireUniqueEmail = true;
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
 });
 
-// Configure JWT authentication with validation parameters
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true, // Ensure token issuer matches expected issuer
-            ValidateAudience = true, // Ensure token audience matches expected audience
-            ValidateLifetime = true, // Ensure token has not expired
-            ValidateIssuerSigningKey = true, // Ensure token is signed with the correct key
-            ValidIssuer = builder.Configuration["Jwt:Issuer"], // Expected token issuer
-            ValidAudience = builder.Configuration["Jwt:Audience"], // Expected token audience
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])) // Secret key for token signing
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = config["Jwt:Issuer"],
+            ValidAudience = config["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ClockSkew = TimeSpan.FromMinutes(1),
         };
     });
 
+// Deny by default: every endpoint requires a signed-in user unless it opts out with [AllowAnonymous].
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+});
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
+// ---------------------------------------------------------------------------
+// Schema + seed. SQL Server applies EF migrations; SQLite uses EnsureCreated
+// (migrations are generated for SQL Server only — see docs/DECISIONS.md).
+// ---------------------------------------------------------------------------
+if (config.GetValue("Database:ApplyMigrationsOnStartup", true))
+{
+    using var scope = app.Services.CreateScope();
+    var appDb = scope.ServiceProvider.GetRequiredService<MedicalInformationDbContext>();
+    var authDb = scope.ServiceProvider.GetRequiredService<MedicalInformationAuthDbContext>();
+    if (isSqlite)
+    {
+        await appDb.Database.EnsureCreatedAsync();
+        await authDb.Database.EnsureCreatedAsync();
+    }
+    else
+    {
+        await authDb.Database.MigrateAsync();
+        await appDb.Database.MigrateAsync();
+    }
+
+    if (config.GetValue("Seed:Enabled", app.Environment.IsDevelopment()))
+    {
+        await scope.ServiceProvider.GetRequiredService<DbSeeder>().SeedAsync();
+    }
+}
+
 if (app.Environment.IsDevelopment())
 {
-    // Enable Swagger in development for API testing and documentation
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+else
+{
+    app.UseHttpsRedirection();
+}
 
-app.UseHttpsRedirection(); // Enforces HTTPS for all requests
+app.UseCors("Client");
+app.UseAuthentication();
+app.UseAuthorization();
 
-app.UseCors("AllowSpecificOrigin"); // Apply the defined CORS policy
-
-app.UseAuthentication(); // Enables authentication middleware
-app.UseAuthorization(); // Enables authorization middleware
-
-
-// Map incoming requests to controllers
+app.MapGet("/api/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapControllers();
 
-app.Run(); // Run the application
+app.Run();
+
+/// <summary>Exposed so the integration tests can host the app with WebApplicationFactory.</summary>
+public partial class Program { }

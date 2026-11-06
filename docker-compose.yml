@@ -1,0 +1,23 @@
+# Local SQL Server for the MIS API. Free Developer edition; data persists in the mis-sql volume.
+# The SA password comes from .env (created by scripts/dev-setup.sh, git-ignored).
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mis-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?Run scripts/dev-setup.sh first to create .env}"
+    ports:
+      - "127.0.0.1:${MSSQL_PORT:-1433}:1433"
+    volumes:
+      - mis-sql:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -Q 'SELECT 1' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+volumes:
+  mis-sql:

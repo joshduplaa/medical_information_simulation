@@ -1,57 +1,57 @@
-﻿using AutoMapper;
+using AutoMapper;
+using ScrumDumpsterMolecularDiagnostic.Auth;
 using ScrumDumpsterMolecularDiagnostic.Models.Domain;
 using ScrumDumpsterMolecularDiagnostic.Models.DTO;
 using ScrumDumpsterMolecularDiagnostic.Repositories.Interfaces;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ScrumDumpsterMolecularDiagnostic.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class AnalytesController : ControllerBase
     {
         private readonly IAnalyteRepository analyteRepository;
+        private readonly IAdminQCLotRepository lotRepository;
         private readonly IMapper mapper;
 
-        public AnalytesController(IAnalyteRepository analyteRepository, IMapper mapper)
+        public AnalytesController(IAnalyteRepository analyteRepository, IAdminQCLotRepository lotRepository, IMapper mapper)
         {
             this.analyteRepository = analyteRepository;
+            this.lotRepository = lotRepository;
             this.mapper = mapper;
         }
 
         [HttpGet]
+        [Authorize(Roles = Roles.Faculty)]
         public async Task<IActionResult> GetAllAnalytes()
         {
-            var analyteModel = await analyteRepository.GetAllAnalytesAsync();
-
-            var analyteDTO = mapper.Map<List<Analyte>>(analyteModel);
-
-            return Ok(analyteDTO);
+            var analytes = await analyteRepository.GetAllAnalytesAsync();
+            return Ok(mapper.Map<List<AnalyteDTO>>(analytes));
         }
 
-        [HttpPost]
-        [Route("{lotId:Guid}")]
-        public async Task<IActionResult> CreateAnalyte([FromRoute] Guid lotId, [FromBody] AddAnalyteRequestDTO dto)
-        {
-            var analyteModel = mapper.Map<Analyte>(dto);
-
-            await analyteRepository.CreateAnalyteAsync(analyteModel);
-
-            var analyteDTO = mapper.Map<AnalyteDTO>(analyteModel);
-
-            return CreatedAtAction("Get", new { id = analyteDTO.AnalyteID }, analyteDTO);
-        }
-
-        [HttpGet]
-        [Route("{lotId:Guid}")]
+        [HttpGet("{lotId:Guid}")]
         public async Task<IActionResult> GetAllAnalytesFromQCLot([FromRoute] Guid lotId)
         {
-            var analyteModels = await analyteRepository.GetAllAnalytesFromQCLotAsync(lotId);
+            var analytes = await analyteRepository.GetAllAnalytesFromQCLotAsync(lotId);
+            return Ok(mapper.Map<List<AnalyteDTO>>(analytes));
+        }
 
-            var analyteDTO = mapper.Map<List<AnalyteDTO>>(analyteModels);
+        [HttpPost("{lotId:Guid}")]
+        [Authorize(Roles = Roles.Faculty)]
+        public async Task<IActionResult> CreateAnalyte([FromRoute] Guid lotId, [FromBody] AddAnalyteRequestDTO dto)
+        {
+            if (await lotRepository.GetQCLotByIDAsync(lotId) == null) return NotFound();
 
-            return Ok(analyteDTO);
+            var analyte = mapper.Map<Analyte>(dto);
+            analyte.AnalyteID = Guid.NewGuid();
+            analyte.AdminQCLotID = lotId; // previously the route lotId was ignored
+            await analyteRepository.CreateAnalyteAsync(analyte);
+
+            // previously CreatedAtAction("Get", ...) pointed at an action that does not exist and threw at runtime
+            return CreatedAtAction(nameof(GetAllAnalytesFromQCLot), new { lotId }, mapper.Map<AnalyteDTO>(analyte));
         }
     }
 }

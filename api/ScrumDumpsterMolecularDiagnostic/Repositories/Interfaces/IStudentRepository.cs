@@ -1,5 +1,4 @@
-﻿using ScrumDumpsterMolecularDiagnostic.Models.Domain;
-using ScrumDumpsterMolecularDiagnostic.Models.DTO;
+using ScrumDumpsterMolecularDiagnostic.Models.Domain;
 
 namespace ScrumDumpsterMolecularDiagnostic.Repositories.Interfaces
 {

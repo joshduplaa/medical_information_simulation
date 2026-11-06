@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScrumDumpsterMolecularDiagnostic", "ScrumDumpsterMolecularDiagnostic\ScrumDumpsterMolecularDiagnostic.csproj", "{CE129B68-5BDB-47FC-B196-DF1F142244C2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScrumDumpsterMolecularDiagnostic.Tests", "ScrumDumpsterMolecularDiagnostic.Tests\ScrumDumpsterMolecularDiagnostic.Tests.csproj", "{707DCF4B-C41D-48ED-8F4A-DCEE0DE81B0A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CE129B68-5BDB-47FC-B196-DF1F142244C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE129B68-5BDB-47FC-B196-DF1F142244C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE129B68-5BDB-47FC-B196-DF1F142244C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE129B68-5BDB-47FC-B196-DF1F142244C2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{707DCF4B-C41D-48ED-8F4A-DCEE0DE81B0A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{707DCF4B-C41D-48ED-8F4A-DCEE0DE81B0A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{707DCF4B-C41D-48ED-8F4A-DCEE0DE81B0A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{707DCF4B-C41D-48ED-8F4A-DCEE0DE81B0A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

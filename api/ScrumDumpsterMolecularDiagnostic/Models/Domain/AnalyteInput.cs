@@ -1,16 +1,15 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 
 namespace ScrumDumpsterMolecularDiagnostic.Models.Domain
 {
+    /// <summary>One result value a student entered for one analyte in one QC run.</summary>
     public class AnalyteInput
     {
         [Key]
         public Guid AnalyteInputID { get; set; }
-        [ForeignKey("ReportID")]
         public Guid ReportID { get; set; }
-        //public StudentReport Report { get; set; }
+        public Guid AnalyteID { get; set; }
         public string AnalyteName { get; set; }
-        public float AnalyteValue { get; set; }
+        public double AnalyteValue { get; set; }
     }
 }

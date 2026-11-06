@@ -1,14 +1,15 @@
-﻿using AutoMapper;
-using ScrumDumpsterMolecularDiagnostic.Models.Domain;
+using AutoMapper;
+using ScrumDumpsterMolecularDiagnostic.Auth;
 using ScrumDumpsterMolecularDiagnostic.Models.DTO;
 using ScrumDumpsterMolecularDiagnostic.Repositories.Interfaces;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ScrumDumpsterMolecularDiagnostic.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class StudentsController : ControllerBase
     {
         private readonly IStudentRepository studentRepository;
@@ -21,82 +22,31 @@ namespace ScrumDumpsterMolecularDiagnostic.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = Roles.Faculty)]
         public async Task<IActionResult> GetAllStudents()
         {
-            var studentsModel = await studentRepository.GetAllStudentsAsync();
-
-            var studentsDTO = mapper.Map<List<StudentDTO>>(studentsModel);
-
-            return Ok(studentsDTO);
+            var students = await studentRepository.GetAllStudentsAsync();
+            return Ok(mapper.Map<List<StudentDTO>>(students.OrderBy(s => s.Lastname).ThenBy(s => s.Firstname)));
         }
 
-        [HttpGet]
-        [Route("{id:Guid}")]
+        /// <summary>Faculty can view any student; a student can view only themselves.</summary>
+        [HttpGet("{id:Guid}")]
         public async Task<IActionResult> GetStudentByID([FromRoute] Guid id)
         {
-            var studentModel = await studentRepository.GetStudentByIDAsync(id);
+            if (!User.IsFaculty() && User.GetProfileId() != id) return Forbid();
 
-            if (studentModel == null)
-            {
-                return NotFound("Student not found");
-            }
-
-            return Ok(studentModel);
+            var student = await studentRepository.GetStudentByIDAsync(id);
+            if (student == null) return NotFound("Student not found");
+            return Ok(mapper.Map<StudentDTO>(student)); // previously returned the domain entity
         }
 
-        //[HttpPost]
-        //public async Task<IActionResult> CreateStudent([FromBody] AddStudentRequestDTO addStudentRequestDTO)
-        //{
-        //    var existingStudent = await studentRepository.GetStudentByNameAsync(addStudentRequestDTO.Username);
-
-        //    if (existingStudent != null)
-        //    {
-        //        return Conflict(new
-        //        {
-        //            message = "Student already existed",
-        //            student = existingStudent
-        //        });
-        //    }
-
-        //    var studentModel = mapper.Map<Student>(addStudentRequestDTO);
-
-        //    await studentRepository.CreateStudentAsync(studentModel);
-
-        //    var studentDTO = mapper.Map<StudentDTO>(studentModel);
-
-        //    return CreatedAtAction(nameof(GetStudentByID), new { id = studentDTO.StudentID }, studentDTO);
-        //}
-
-        // [HttpPut]
-        // [Route("{id:Guid}")]
-        // public async Task<IActionResult> UpdateStudentPassword([FromRoute] Guid id, [FromBody] UpdatePasswordDTO dto)
-        // {
-        //     var studentModel = await studentRepository.UpdateStudentPasswordAsync(id, dto);
-
-        //     if (studentModel == null)
-        //     {
-        //         return NotFound("Student not found");
-        //     }
-
-        //     var studentDTO = mapper.Map<StudentDTO>(studentModel);
-
-        //     return Ok(studentDTO);
-        // }
-
-        [HttpDelete]
-        [Route("{id:Guid}")]
+        [HttpDelete("{id:Guid}")]
+        [Authorize(Roles = Roles.Faculty)]
         public async Task<IActionResult> DeleteStudent([FromRoute] Guid id)
         {
-            var studentModel = await studentRepository.DeleteStudentAsync(id);
-
-            if (studentModel == null)
-            {
-                return NotFound("Student not found");
-            }
-
-            var studentDTO = mapper.Map<StudentDTO>(studentModel);
-            
-            return Ok(studentDTO);
+            var student = await studentRepository.DeleteStudentAsync(id);
+            if (student == null) return NotFound("Student not found");
+            return Ok(mapper.Map<StudentDTO>(student));
         }
     }
 }
