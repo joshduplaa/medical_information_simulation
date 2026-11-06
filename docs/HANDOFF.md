@@ -47,6 +47,13 @@ To wipe the dev database and reseed: `docker compose down -v && docker compose u
 .NET was installed at user level to `~/.dotnet` (not on the system PATH). Run `export PATH=$HOME/.dotnet:$PATH`
 before `dotnet` or `npm run e2e`.
 
+## Portfolio
+
+- Live: https://joshuaduplaaswe.web.app/Projects/MedicalInformationSimulation (verified at 18:05).
+- **Merge PR https://github.com/joshduplaa/JoshuaDuplaaPortfolioWebsite/pull/9 before the next portfolio deploy
+  from `main`**, or that deploy reverts the MIS update. Then remove the worktree:
+  `git -C ~/professional/JoshuaDuplaaPortfolioWebsite worktree remove .worktrees/mis`.
+
 ## Must know
 
 - **The old JWT signing key is in git history** (the original `appsettings.json`). Treat it as public. Never use

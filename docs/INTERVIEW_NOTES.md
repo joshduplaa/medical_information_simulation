@@ -17,7 +17,7 @@ end to end:
 
 | Work | Who |
 | --- | --- |
-| Original concept, first client and API, QC builder, AdminQCLot API, image upload | Huy Nguyen and the earlier team (2024) |
+| Original concept, first client and API, QC builder, AdminQCLot API, image upload | Huy (yuh137) and the earlier team (2024) |
 | Original Levey-Jennings chart (d3 + IndexedDB, on team branches) | Geethika |
 | Create/edit QC with backend, sign-up/login against the DB, order page | Taylor Smith |
 | Account page, password hashing, case studies | Jaden Haagen |

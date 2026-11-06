@@ -94,3 +94,11 @@ Remaining (not started; documented as gaps):
 3. Password reset / email.
 
 Next: portfolio (Milestone 9). Started at 17:59, ahead of the 20:53 cutoff, because the backlog ran out.
+
+### 17:59–18:05 — Portfolio (Milestone 9)
+- Worked in a clean worktree (`.worktrees/mis`, excluded locally via `.git/info/exclude`) on the new branch `add-mis-case-study` from origin/main. The main checkout's untracked `.claude/` was never touched.
+- Fixed the name: "MIS Website / Molecular Information Simulations laboratory" → Medical Information Simulation (MIS). Code links to `tree/finish-mis`. The demo link was kept because it is verified live.
+- Added the case study page `/Projects/MedicalInformationSimulation`: 6 WebP screenshots from the running app (~250 kB total), team credit, and verified facts only. The credits use only names as git records them (no surname for Huy, because git doesn't give one).
+- `CaseStudy` gained optional `screenshots` and `credits` sections; the existing case studies are unchanged.
+- Verified: tsc, lint and build are clean. Checked via `firebase serve` and then live at https://joshuaduplaaswe.web.app: dark and light, 1366 and 375 px, 6/6 images load, no overflow, no console or HTTP errors, links correct, the other case studies still render.
+- Commit `0325386` pushed to `add-mis-case-study`. PR https://github.com/joshduplaa/JoshuaDuplaaPortfolioWebsite/pull/9 is **not merged** (see DECISIONS D23). `firebase deploy --only hosting` → deploy complete.

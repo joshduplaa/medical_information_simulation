@@ -135,3 +135,11 @@ profile, so it seeds the synthetic data. It is a local profile, not a production
 
 **D22. CI has no deploy step and no secrets.** The API tests use a fixed test-only key set in the test factory. The
 E2E API script generates a throwaway key per run. Deploys stay a deliberate human action.
+
+## Portfolio
+
+**D23. The portfolio change went to a branch and a PR, and was deployed from that branch. It was not merged into the
+portfolio's `main`.** The brief said not to change `main`. That rule was written for MIS, but its scope was
+ambiguous, and recent portfolio changes all went through PRs. The PR is the reversible choice.
+*Cost:* the live site is ahead of `main` until PR #9 is merged. A deploy from `main` before then would revert the MIS
+update. HANDOFF flags this as the first next step.
