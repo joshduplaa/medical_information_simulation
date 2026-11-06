@@ -192,4 +192,22 @@ public class WorkflowTests : IClassFixture<MisApiFactory>
         Assert.EndsWith("Z", text);
         Assert.Equal(runDate, DateTime.Parse(text, null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal));
     }
+    [Fact]
+    public async Task Opening_a_new_active_lot_of_the_same_material_closes_the_previous_one()
+    {
+        var faculty = await factory.Faculty();
+        object Body(string lotNumber) => new
+        {
+            lotNumber, qcName = "Urinalysis Control Level 1", department = "Chemistry",
+            openDate = DateTime.UtcNow.AddDays(-1), expirationDate = DateTime.UtcNow.AddDays(90), isActive = true,
+            analytes = new[] { new { analyteName = "Urine Creatinine", analyteAcronym = "UCRE", unitOfMeasure = "mg/dL", minLevel = 90.0, maxLevel = 110.0, mean = 100.0, stdDevi = 5.0 } },
+        };
+        var first = await Json(await faculty.PostAsJsonAsync("/api/AdminQCLots", Body("UA1-OLD-0001")));
+        var second = await faculty.PostAsJsonAsync("/api/AdminQCLots", Body("UA1-NEW-0002"));
+        Assert.Equal(HttpStatusCode.Created, second.StatusCode);
+
+        var reloaded = await Json(await faculty.GetAsync($"/api/AdminQCLots/{first.GetProperty("adminQCLotID").GetGuid()}"));
+        Assert.False(reloaded.GetProperty("isActive").GetBoolean());
+        Assert.True((await Json(second)).GetProperty("isActive").GetBoolean());
+    }
 }

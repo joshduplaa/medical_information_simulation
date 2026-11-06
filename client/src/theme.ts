@@ -25,6 +25,9 @@ export const theme = createTheme({
     MuiPaper: { defaultProps: { elevation: 0 }, styleOverrides: { root: { border: "1px solid #DFE6EE" } } },
     MuiAppBar: { styleOverrides: { root: { border: "none" } } },
     MuiDrawer: { styleOverrides: { paper: { border: "none" } } },
+    // Positioned so absolutely-positioned children (e.g. .sr-only header text) stay inside the horizontal scroll
+    // area instead of widening the whole page on phones.
+    MuiTableContainer: { styleOverrides: { root: { position: "relative" } } },
     MuiTableCell: { styleOverrides: { head: { fontWeight: 600, color: "#4A5A6A", whiteSpace: "nowrap" } } },
     MuiButton: { defaultProps: { disableElevation: true } },
   },
