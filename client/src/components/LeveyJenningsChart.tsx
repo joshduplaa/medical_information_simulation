@@ -9,7 +9,9 @@ const shortDate = new Intl.DateTimeFormat(undefined, { month: "short", day: "num
 import { QcStatusChip } from "./StatusChip";
 
 const STATUS_COLOR: Record<QcStatus, string> = { ok: "#0F6FA8", warning: "#C77700", reject: "#C62828" };
-const LINE = { mean: "#2E8B4A", sd1: "#9AA9B8", sd2: "#C77700", sd3: "#C62828" };
+const LINE = { mean: "#267A3F", sd1: "#9AA9B8", sd2: "#C77700", sd3: "#C62828" };
+// Label text needs 4.5:1 on white, so labels use darker shades of the (lighter) line colors.
+const LABEL = { mean: "#267A3F", sd1: "#5F6F7F", sd2: "#B45309", sd3: "#C62828" };
 
 interface ChartPoint {
   index: number;
@@ -70,12 +72,13 @@ export default function LeveyJenningsChart({ series, currentReportId }: { series
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E6ECF2" />
                 <XAxis dataKey="index" tickFormatter={(i: number) => data[i - 1]?.label ?? ""} tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                 <YAxis domain={domain} tick={{ fontSize: 11 }} width={56} tickFormatter={(v: number) => formatValue(v, sd)} />
-                <ReferenceLine y={mean} stroke={LINE.mean} strokeWidth={1.5} label={{ value: "x̄", position: "right", fontSize: 12, fill: LINE.mean }} />
+                <ReferenceLine y={mean} stroke={LINE.mean} strokeWidth={1.5} label={{ value: "x̄", position: "right", fontSize: 12, fill: LABEL.mean }} />
                 {[1, 2, 3].map((k) => {
                   const color = k === 1 ? LINE.sd1 : k === 2 ? LINE.sd2 : LINE.sd3;
+                  const labelColor = k === 1 ? LABEL.sd1 : k === 2 ? LABEL.sd2 : LABEL.sd3;
                   return [
-                    <ReferenceLine key={`+${k}`} y={mean + k * sd} stroke={color} strokeDasharray="4 4" label={{ value: `+${k}SD`, position: "right", fontSize: 11, fill: color }} />,
-                    <ReferenceLine key={`-${k}`} y={mean - k * sd} stroke={color} strokeDasharray="4 4" label={{ value: `−${k}SD`, position: "right", fontSize: 11, fill: color }} />,
+                    <ReferenceLine key={`+${k}`} y={mean + k * sd} stroke={color} strokeDasharray="4 4" label={{ value: `+${k}SD`, position: "right", fontSize: 11, fill: labelColor }} />,
+                    <ReferenceLine key={`-${k}`} y={mean - k * sd} stroke={color} strokeDasharray="4 4" label={{ value: `−${k}SD`, position: "right", fontSize: 11, fill: labelColor }} />,
                   ];
                 })}
                 <Tooltip

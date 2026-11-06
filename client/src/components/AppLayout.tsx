@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
-  AppBar, Alert, Avatar, Box, Chip, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText,
+  AppBar, Alert, Avatar, Box, Chip, Divider, Drawer, IconButton, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
   Menu, MenuItem, Toolbar, Typography, useMediaQuery, useTheme,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -66,20 +66,21 @@ export default function AppLayout() {
     <Box component="nav" aria-label="Main" sx={{ pt: 1 }}>
       <List>
         {nav.map((item) => (
+          <ListItem key={item.to} disablePadding>
           <ListItemButton
-            key={item.to}
             component={NavLink}
             to={item.to}
             end={item.to === "/"}
             onClick={() => setMobileOpen(false)}
             sx={{
-              mx: 1, borderRadius: 2, mb: 0.5,
+              mx: 1, borderRadius: 2, mb: 0.5, flexGrow: 1,
               "&.active": { bgcolor: "primary.main", color: "primary.contrastText", "& .MuiListItemIcon-root": { color: "inherit" } },
             }}
           >
             <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
             <ListItemText primary={item.label} />
           </ListItemButton>
+          </ListItem>
         ))}
       </List>
     </Box>

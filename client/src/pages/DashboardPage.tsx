@@ -37,7 +37,7 @@ function RunList({ title, runs, empty }: { title: string; runs: Report[]; empty:
               </Box>
               <Stack direction="row" alignItems="center" gap={1}>
                 <ReportStatusChip status={r.status} />
-                <Button size="small" component={RouterLink} to={`/runs/${r.reportID}`}>Open</Button>
+                <Button size="small" component={RouterLink} to={`/runs/${r.reportID}`} aria-label={`Open ${r.qcName} run from ${formatDate(r.runDate)}${r.studentName ? ` by ${r.studentName}` : ""}`}>Open</Button>
               </Stack>
             </Stack>
           ))}

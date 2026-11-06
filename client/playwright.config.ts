@@ -20,7 +20,7 @@ export default defineConfig({
   use: { trace: "retain-on-failure", screenshot: "only-on-failure", ...devices["Desktop Chrome"] },
   projects: [
     { name: "api", testMatch: /core-workflow\.spec\.ts/, use: { baseURL: "http://localhost:5174" } },
-    { name: "demo", testMatch: /demo-mode\.spec\.ts/, use: { baseURL: demoUrl ?? "http://localhost:5175" } },
+    { name: "demo", testMatch: /(demo-mode|a11y)\.spec\.ts/, use: { baseURL: demoUrl ?? "http://localhost:5175" } },
   ],
   webServer: demoUrl ? [] : [
     {

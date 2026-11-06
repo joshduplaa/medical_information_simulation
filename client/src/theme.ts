@@ -4,7 +4,12 @@ import { createTheme } from "@mui/material/styles";
 export const theme = createTheme({
   palette: {
     primary: { main: "#0F6FA8", dark: "#0B5583", light: "#4B97C6", contrastText: "#fff" },
-    secondary: { main: "#2E8B4A", contrastText: "#fff" },
+    secondary: { main: "#267A3F", contrastText: "#fff" }, // logo green, darkened to 5.3:1 on white
+    // Status colors darkened from MUI's defaults so chip text meets WCAG AA (4.5:1) on white and as white-on-color.
+    info: { main: "#01579B", contrastText: "#fff" },
+    warning: { main: "#B45309", contrastText: "#fff" },
+    success: { main: "#2E7D32", contrastText: "#fff" },
+    error: { main: "#C62828", contrastText: "#fff" },
     background: { default: "#F4F7FA", paper: "#FFFFFF" },
     text: { primary: "#1B2733", secondary: "#4A5A6A" },
   },
