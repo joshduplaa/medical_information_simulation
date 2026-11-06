@@ -194,7 +194,7 @@ firebase deploy --only hosting --project scrumdumpstersmis   # from client/, nee
 Original team (Texas Tech HSC capstone, 2024), from the git history of
 [yuh137/medical_information_simulation](https://github.com/yuh137/medical_information_simulation):
 
-- **Huy Nguyen** (HUY / nqhuy137): original client and API: QC builder, AdminQCLot API, auth wiring, image upload,
+- **Huy** (GitHub: yuh137; commits as HUY / nqhuy137, the original repository owner): original client and API: QC builder, AdminQCLot API, auth wiring, image upload,
   routing.
 - **Joshua Duplaa** (joshduplaa): the `clientReactApp-SD` rebuild and the consolidated `ScrumDumpsterMolecularDiagnostic` API
   built from Huy's code, the QC order and report flow, the first Firebase deploy, and this `finish-mis` completion.
