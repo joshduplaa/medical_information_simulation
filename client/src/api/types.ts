@@ -140,6 +140,8 @@ export interface ReportQuery {
 export interface MisApi {
   login(username: string, password: string): Promise<Session>;
   register(draft: RegisterDraft): Promise<void>;
+  /** Faculty only: creates another faculty account. */
+  registerFaculty(draft: RegisterDraft): Promise<void>;
   me(): Promise<UserProfile>;
 
   listLots(): Promise<QcLot[]>;

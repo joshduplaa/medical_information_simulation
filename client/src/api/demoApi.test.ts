@@ -88,6 +88,17 @@ describe("demo API", () => {
     await expect(api.register({ username: "weak", email: "w@x.edu", password: "short", firstname: "W", lastname: "K", initials: "WK" })).rejects.toMatchObject({ status: 400 });
   });
 
+  it("only faculty can create faculty accounts", async () => {
+    const draft = { username: "tchen", email: "tchen@mis.example.edu", password: "Faculty456!", firstname: "Taylor", lastname: "Chen", initials: "TC" };
+    await as("student");
+    await expect(api.registerFaculty(draft)).rejects.toMatchObject({ status: 403 });
+    await as("faculty");
+    await api.registerFaculty(draft);
+    const session = await api.login("tchen", "Faculty456!");
+    expect(session.user.role).toBe("faculty");
+    await expect(api.registerFaculty(draft)).rejects.toMatchObject({ status: 400 });
+  });
+
   it("persists changes in localStorage and can reset", async () => {
     await as("faculty");
     await api.createLot(lotDraft("DEMO-PERSIST-1"));

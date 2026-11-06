@@ -92,3 +92,26 @@ test("wrong password shows an error and students cannot open faculty pages", asy
   await page.goto("/lots");
   await expect(page.getByText("Not available for your role")).toBeVisible();
 });
+
+test("faculty can create another faculty account, which can then manage lots", async ({ page }) => {
+  const username = `fac${Date.now()}`;
+  await signIn(page, "faculty", "Faculty123!");
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("menuitem", { name: "Account" }).click();
+
+  const panel = page.getByRole("region", { name: "Add a faculty member" });
+  await panel.getByLabel("First name").fill("Casey");
+  await panel.getByLabel("Last name").fill("Nguyen");
+  await panel.getByLabel("Username").fill(username);
+  await panel.getByLabel("Email").fill(`${username}@mis.example.edu`);
+  await panel.getByLabel(/^Password/).fill("Faculty456!");
+  await panel.getByLabel("Confirm password").fill("Faculty456!");
+  await panel.getByRole("button", { name: "Create faculty account" }).click();
+  await expect(panel.getByText(`Faculty account “${username}” created`)).toBeVisible();
+  await expect(panel.getByLabel("Username")).toHaveValue("");
+
+  await signOut(page);
+  await signIn(page, username, "Faculty456!");
+  await expect(nav(page, "QC lots")).toBeVisible();
+  await expect(nav(page, "Review queue")).toBeVisible();
+});

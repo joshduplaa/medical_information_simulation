@@ -32,6 +32,9 @@ export function createHttpApi(baseURL: string, onUnauthorized?: () => void): Mis
     async register(draft) {
       await http.post("/Auth/Register", draft);
     },
+    async registerFaculty(draft) {
+      await http.post("/Auth/RegisterFaculty", draft);
+    },
     async me() {
       return (await http.get<UserProfile>("/Auth/Me")).data;
     },

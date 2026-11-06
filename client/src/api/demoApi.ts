@@ -1,7 +1,7 @@
 import { ApiError } from "./errors";
 import { tokenStore } from "./tokenStore";
 import type {
-  Analyte, AnalyteDraft, LjSeries, LotDraft, MisApi, QcLot, Report, ReportStatus, Session, Student, UserProfile,
+  Analyte, AnalyteDraft, LjSeries, LotDraft, MisApi, QcLot, RegisterDraft, Report, ReportStatus, Session, Student, UserProfile,
 } from "./types";
 
 /**
@@ -206,6 +206,14 @@ export function createDemoApi(storage: Storage | undefined = typeof localStorage
     }
     if (!existingId && s.lots.some((l) => l.lotNumber === d.lotNumber.trim())) fail("Lot number already exists.", 409);
   };
+  const addUser = (s: State, d: RegisterDraft, role: "student" | "faculty") => {
+    if (s.users.some((u) => u.username.toLowerCase() === d.username.toLowerCase())) fail("That username is already taken.", 400);
+    if (s.users.some((u) => u.email.toLowerCase() === d.email.toLowerCase())) fail("An account with that email already exists.", 400);
+    if (d.password.length < 8 || !/[a-z]/.test(d.password) || !/[A-Z]/.test(d.password) || !/\d/.test(d.password)) {
+      fail("Password must be at least 8 characters with an uppercase letter, a lowercase letter, and a digit.", 400);
+    }
+    s.users.push({ ...d, userID: newId(), role });
+  };
   const toAnalyte = (lotId: string, a: AnalyteDraft): Analyte => ({ ...a, analyteID: a.analyteID ?? newId(), adminQCLotID: lotId });
 
   return {
@@ -224,13 +232,13 @@ export function createDemoApi(storage: Storage | undefined = typeof localStorage
       return delay<Session>({ token: `demo:${u!.userID}`, expiresAt: iso(Date.now() + 8 * 3600e3), user });
     },
     async register(d) {
+      mutate((s) => addUser(s, d, "student")); // public sign-up is always a student
+      return delay(undefined);
+    },
+    async registerFaculty(d) {
       mutate((s) => {
-        if (s.users.some((u) => u.username.toLowerCase() === d.username.toLowerCase())) fail("That username is already taken.", 400);
-        if (s.users.some((u) => u.email.toLowerCase() === d.email.toLowerCase())) fail("An account with that email already exists.", 400);
-        if (d.password.length < 8 || !/[a-z]/.test(d.password) || !/[A-Z]/.test(d.password) || !/\d/.test(d.password)) {
-          fail("Password must be at least 8 characters with an uppercase letter, a lowercase letter, and a digit.", 400);
-        }
-        s.users.push({ ...d, userID: newId(), role: "student" }); // public sign-up is always a student
+        requireFaculty(s);
+        addUser(s, d, "faculty");
       });
       return delay(undefined);
     },
