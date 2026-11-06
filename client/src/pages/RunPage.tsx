@@ -11,7 +11,7 @@ import LeveyJenningsChart from "../components/LeveyJenningsChart";
 import { ErrorState, Loading } from "../components/PageState";
 import { QcStatusChip, ReportStatusChip } from "../components/StatusChip";
 import { departmentLabel, formatDate, formatDateTime, formatValue } from "../components/format";
-import { formatZ, singleValueRules, statusOf, zScore } from "../qc/westgard";
+import { evaluateInContext, formatZ, priorValues, singleValueRules, statusOf, zScore, type RuleId } from "../qc/westgard";
 import PageHeader from "./PageHeader";
 
 const toLocalInput = (iso: string) => {
@@ -20,7 +20,24 @@ const toLocalInput = (iso: string) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-function ResultsEntry({ report, onSaved }: { report: Report; onSaved: (r: Report) => void }) {
+/** Earlier results on this lot per analyte, or null until the Levey-Jennings data has loaded. */
+type PriorResults = Record<string, number[]> | null;
+
+function priorResults(series: LjSeries[] | null, report: Report, runDate: string): PriorResults {
+  if (!series) return null;
+  return Object.fromEntries(series.map((s) => [s.analyte.analyteID, priorValues(s.points, report.reportID, runDate)]));
+}
+
+/**
+ * Westgard rules for one result. With the run history loaded this applies the full multirule set (so the table
+ * agrees with the Levey-Jennings chart); before it loads it falls back to the single-value rules.
+ */
+function rulesFor(prior: PriorResults, analyteID: string, value: number, mean: number, sd: number): RuleId[] {
+  if (!Number.isFinite(value)) return [];
+  return prior ? evaluateInContext(prior[analyteID] ?? [], value, mean, sd).rules : singleValueRules(zScore(value, mean, sd));
+}
+
+function ResultsEntry({ report, series, onSaved }: { report: Report; series: LjSeries[] | null; onSaved: (r: Report) => void }) {
   const navigate = useNavigate();
   const initial = useMemo(
     () => Object.fromEntries(report.analytes.map((a) => [a.analyteID, report.analyteInputs.find((i) => i.analyteID === a.analyteID)?.analyteValue.toString() ?? ""])),
@@ -42,6 +59,10 @@ function ResultsEntry({ report, onSaved }: { report: Report; onSaved: (r: Report
   const filled = parsed.filter((p) => p.raw !== "" && !p.invalid);
   const anyInvalid = parsed.some((p) => p.invalid);
   const complete = filled.length === report.analytes.length;
+  const prior = useMemo(
+    () => priorResults(series, report, runDate ? new Date(runDate).toISOString() : report.runDate),
+    [series, report, runDate],
+  );
 
   async function persist() {
     return api.saveResults(
@@ -108,7 +129,7 @@ function ResultsEntry({ report, onSaved }: { report: Report; onSaved: (r: Report
           <TableBody>
             {parsed.map(({ analyte: a, raw, value, invalid }) => {
               const z = Number.isFinite(value) ? zScore(value, a.mean, a.stdDevi) : NaN;
-              const rules = singleValueRules(z);
+              const rules = rulesFor(prior, a.analyteID, value, a.mean, a.stdDevi);
               return (
                 <TableRow key={a.analyteID}>
                   <TableCell>
@@ -170,7 +191,8 @@ function ResultsEntry({ report, onSaved }: { report: Report; onSaved: (r: Report
   );
 }
 
-function ResultsTable({ report }: { report: Report }) {
+function ResultsTable({ report, series }: { report: Report; series: LjSeries[] | null }) {
+  const prior = priorResults(series, report, report.runDate);
   return (
     <Paper sx={{ p: { xs: 2, md: 3 } }} component="section" aria-labelledby="results-title">
       <Typography id="results-title" variant="h2" component="h2" sx={{ mb: 2 }}>Results</Typography>
@@ -190,7 +212,7 @@ function ResultsTable({ report }: { report: Report }) {
             {report.analytes.map((a) => {
               const input = report.analyteInputs.find((i) => i.analyteID === a.analyteID);
               const z = input ? zScore(input.analyteValue, a.mean, a.stdDevi) : NaN;
-              const rules = singleValueRules(z);
+              const rules = input ? rulesFor(prior, a.analyteID, input.analyteValue, a.mean, a.stdDevi) : [];
               return (
                 <TableRow key={a.analyteID}>
                   <TableCell><b>{a.analyteAcronym}</b> <Typography component="span" variant="body2" color="text.secondary">{a.analyteName}</Typography></TableCell>
@@ -306,7 +328,7 @@ export default function RunPage() {
         </Alert>
       )}
 
-      {editable ? <ResultsEntry key={`${report.reportID}-${report.status}`} report={report} onSaved={update} /> : <ResultsTable report={report} />}
+      {editable ? <ResultsEntry key={`${report.reportID}-${report.status}`} report={report} series={series} onSaved={update} /> : <ResultsTable report={report} series={series} />}
       {user?.role === "faculty" && report.status === "Submitted" && <ReviewPanel report={report} onReviewed={update} />}
 
       <Box component="section" aria-labelledby="lj-title">

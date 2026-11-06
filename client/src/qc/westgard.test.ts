@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateSeries, formatZ, singleValueRules, statusOf, zScore } from "./westgard";
+import { evaluateInContext, evaluateSeries, formatZ, priorValues, singleValueRules, statusOf, zScore } from "./westgard";
 
 const MEAN = 100;
 const SD = 2;
@@ -73,5 +73,30 @@ describe("status", () => {
     expect(formatZ(1.234)).toBe("+1.23 SD");
     expect(formatZ(-0.5)).toBe("−0.50 SD");
     expect(formatZ(NaN)).toBe("—");
+  });
+});
+
+describe("evaluating a run in context", () => {
+  const pts = [
+    { reportID: "a", runDate: "2026-11-01T15:00:00Z", value: 100 },
+    { reportID: "b", runDate: "2026-11-02T15:00:00Z", value: 106 },
+    { reportID: "c", runDate: "2026-11-03T15:00:00Z", value: 105.5 },
+  ];
+
+  it("uses only the runs before this one", () => {
+    expect(priorValues(pts, "c", pts[2].runDate)).toEqual([100, 106]);
+    expect(priorValues(pts, "a", pts[0].runDate)).toEqual([]);
+  });
+
+  it("falls back to run date for a run with no saved value yet", () => {
+    expect(priorValues(pts, "new", "2026-11-02T20:00:00Z")).toEqual([100, 106]);
+  });
+
+  it("flags 2-2s that a single-value check would only call a warning", () => {
+    const prior = [100, 104.6];
+    expect(singleValueRules(zScore(105, 100, 2))).toEqual(["1-2s"]);
+    const point = evaluateInContext(prior, 105, 100, 2);
+    expect(point.rules).toEqual(expect.arrayContaining(["1-2s", "2-2s"]));
+    expect(point.status).toBe("reject");
   });
 });

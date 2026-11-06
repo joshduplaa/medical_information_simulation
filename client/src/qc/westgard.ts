@@ -89,3 +89,16 @@ export function formatZ(z: number): string {
   if (!Number.isFinite(z)) return "—";
   return `${z >= 0 ? "+" : "−"}${Math.abs(z).toFixed(2)} SD`;
 }
+
+/** The values recorded on this lot before the given run, in run order (the context the multirules look back over). */
+export function priorValues(points: { reportID: string; runDate: string; value: number }[], reportId: string, runDate: string): number[] {
+  const idx = points.findIndex((p) => p.reportID === reportId);
+  if (idx >= 0) return points.slice(0, idx).map((p) => p.value);
+  const cutoff = Date.parse(runDate);
+  return points.filter((p) => Date.parse(p.runDate) < cutoff).map((p) => p.value);
+}
+
+/** Evaluates one result against the full multirule set, given the earlier results on the same lot and analyte. */
+export function evaluateInContext(prior: number[], value: number, mean: number, sd: number): EvaluatedPoint {
+  return evaluateSeries([...prior, value], mean, sd)[prior.length];
+}
