@@ -1,6 +1,5 @@
-﻿using AutoMapper;
-using ScrumDumpsterMolecularDiagnostic.CustomActionFilter;
-using ScrumDumpsterMolecularDiagnostic.Models.Domain;
+using AutoMapper;
+using ScrumDumpsterMolecularDiagnostic.Auth;
 using ScrumDumpsterMolecularDiagnostic.Models.DTO;
 using ScrumDumpsterMolecularDiagnostic.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +9,7 @@ namespace ScrumDumpsterMolecularDiagnostic.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize]
+    [Authorize(Roles = Roles.Faculty)]
     public class AdminsController : ControllerBase
     {
         private readonly IAdminRepository adminRepository;
@@ -23,78 +22,27 @@ namespace ScrumDumpsterMolecularDiagnostic.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllAdmins([FromQuery] string? filterQuery)
         {
-            var adminsDomain = await adminRepository.GetAdminAsync(filterQuery);
-
-            var adminsDTO = mapper.Map<List<AdminDTO>>(adminsDomain);
-
-            return Ok(adminsDTO);
+            var admins = await adminRepository.GetAdminAsync(filterQuery);
+            return Ok(mapper.Map<List<AdminDTO>>(admins));
         }
 
-        [HttpGet]
-        [Route("{id:Guid}")]
-        [Authorize(Roles = "Admin")]
+        [HttpGet("{id:Guid}")]
         public async Task<IActionResult> GetAdminById([FromRoute] Guid id)
         {
-            var adminDomain = await adminRepository.GetAdminByIdAsync(id);
-
-            if (adminDomain == null)
-            {
-                return NotFound();
-            }
-
-            var adminDTO = mapper.Map<AdminDTO>(adminDomain);
-
-            return Ok(adminDTO);
+            var admin = await adminRepository.GetAdminByIdAsync(id);
+            if (admin == null) return NotFound();
+            return Ok(mapper.Map<AdminDTO>(admin));
         }
 
-        //[HttpPost]
-        //[ValidateModel]
-        //public async Task<IActionResult> CreateNewAdmin([FromBody] AddAdminRequestDTO request)
-        //{
-        //    var newAdmin = mapper.Map<Admin>(request);
-
-        //    await adminRepository.CreateAdminAsync(newAdmin);
-
-        //    var adminDTO = mapper.Map<AdminDTO>(newAdmin);
-
-        //    return CreatedAtAction(nameof(GetAdminById), new { id = adminDTO.AdminID }, adminDTO);
-        //}
-
-        //[HttpPut]
-        //[Route("{id:Guid}")]
-        //[Authorize(Roles = "Admin")]
-        //public async Task<IActionResult> UpdateAdmin([FromRoute] Guid id, [FromBody] UpdatePasswordDTO updatePasswordDTO)
-        //{
-        //    var adminDomain = await adminRepository.UpdateAdminPasswordAsync(id, updatePasswordDTO);
-
-        //    if (adminDomain == null)
-        //    {
-        //        return NotFound("Admin not found");
-        //    }
-
-        //    var adminDTO = mapper.Map<AdminDTO>(adminDomain);
-
-        //    return Ok(adminDTO);
-        //}
-
-        [HttpDelete]
-        [Route("{id:Guid}")]
-        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id:Guid}")]
         public async Task<IActionResult> DeleteAdmin([FromRoute] Guid id)
         {
-            var adminModel = await adminRepository.DeleteAdminAsync(id);
-
-            if (adminModel == null)
-            {
-                return NotFound("Admin does not exist");
-            }
-
-            var adminDTO = mapper.Map<AdminDTO>(adminModel);
-
-            return Ok(adminDTO);
+            if (User.GetProfileId() == id) return BadRequest("You cannot delete your own faculty account.");
+            var admin = await adminRepository.DeleteAdminAsync(id);
+            if (admin == null) return NotFound("Admin does not exist");
+            return Ok(mapper.Map<AdminDTO>(admin));
         }
     }
 }

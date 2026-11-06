@@ -1,0 +1,61 @@
+# Local development stack for MIS. Secrets come from .env (created by scripts/dev-setup.sh, git-ignored).
+#   docker compose up -d --wait db               SQL Server only (run the API and client on the host)
+#   docker compose --profile full up -d --build  SQL Server + API (:5029) + client (http://localhost:8080)
+# SQL Server is the free Developer edition; data persists in the mis-sql volume.
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mis-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?Run scripts/dev-setup.sh first to create .env}"
+    ports:
+      - "127.0.0.1:${MSSQL_PORT:-1433}:1433"
+    volumes:
+      - mis-sql:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -Q 'SELECT 1' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  api:
+    profiles: [full]
+    build: ./api/ScrumDumpsterMolecularDiagnostic
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Development = seed the synthetic data and enable Swagger; this profile is for local use only.
+      ASPNETCORE_ENVIRONMENT: Development
+      Database__Provider: SqlServer
+      ConnectionStrings__MedicalInformationConnectionString: "Server=db,1433;Database=Medical_Information;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False"
+      ConnectionStrings__MedicalInformationAuthConnectionString: "Server=db,1433;Database=Medical_Information_Auth;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False"
+      Jwt__Key: "${JWT_KEY:?Run scripts/dev-setup.sh to add JWT_KEY to .env}"
+      Cors__AllowedOrigins__0: http://localhost:8080
+    ports:
+      - "127.0.0.1:5029:8080"
+    healthcheck:
+      # The aspnet image has no curl; bash's /dev/tcp is enough to see that Kestrel is listening.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+  web:
+    profiles: [full]
+    build:
+      context: ./client
+      args:
+        VITE_API_BASE_URL: http://localhost:5029/api
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:80"
+
+volumes:
+  mis-sql:

@@ -5,5 +5,7 @@
         AlreadyExist,
         NotFound,
         MinimumLengthRequired,
+        InUse,
+        InvalidState,
     }
 }

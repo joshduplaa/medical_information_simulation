@@ -1,8 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 
 namespace ScrumDumpsterMolecularDiagnostic.Models.Domain
 {
+    /// <summary>
+    /// One analyte on a QC lot, with the lot's target statistics.
+    /// Mean and StdDevi are the established target values used for z-scores and Levey-Jennings limits.
+    /// MinLevel/MaxLevel are the manufacturer's acceptable range shown to students.
+    /// </summary>
     public class Analyte
     {
         [Key]
@@ -10,12 +14,10 @@ namespace ScrumDumpsterMolecularDiagnostic.Models.Domain
         public string AnalyteName { get; set; }
         public string AnalyteAcronym { get; set; }
         public string UnitOfMeasure { get; set; }
-        public float MinLevel { get; set; }
-        public float MaxLevel { get; set; }
-        public float Mean { get; set; }
-        public float StdDevi { get; set; }
-        [ForeignKey("AdminQCLotID")]
+        public double MinLevel { get; set; }
+        public double MaxLevel { get; set; }
+        public double Mean { get; set; }
+        public double StdDevi { get; set; }
         public Guid AdminQCLotID { get; set; }
-        //public AdminQCLot AdminQCLot { get; set; }
     }
 }

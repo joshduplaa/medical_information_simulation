@@ -1,0 +1,43 @@
+# --- .NET ---
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.db
+*.db-shm
+*.db-wal
+
+# --- Node / Vite ---
+node_modules/
+dist/
+dist-ssr/
+*.local
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# --- Firebase ---
+.firebase/
+firebase-debug.log
+
+# --- Secrets & local config (examples are committed as *.example) ---
+.env
+.env.*
+!.env.example
+!.env.*.example
+!client/.env.demo
+appsettings.*.local.json
+
+# --- Uploaded files written by the API at runtime ---
+api/ScrumDumpsterMolecularDiagnostic/Images/*
+!api/ScrumDumpsterMolecularDiagnostic/Images/.gitkeep
+
+# --- OS / editors ---
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp

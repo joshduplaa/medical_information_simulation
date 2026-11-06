@@ -1,31 +1,33 @@
-﻿using ScrumDumpsterMolecularDiagnostic.Data;
+using ScrumDumpsterMolecularDiagnostic.Data;
 using ScrumDumpsterMolecularDiagnostic.Enums;
 using ScrumDumpsterMolecularDiagnostic.Models.Domain;
 using ScrumDumpsterMolecularDiagnostic.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using System.Runtime.Intrinsics.Arm;
 
 namespace ScrumDumpsterMolecularDiagnostic.Repositories.SQLImplementation
 {
     public class SQLAdminQCLotRepository : IAdminQCLotRepository
     {
         private readonly MedicalInformationDbContext dbContext;
-        private readonly MedicalInformationAuthDbContext authContext;
 
-        public SQLAdminQCLotRepository(MedicalInformationDbContext dbContext, MedicalInformationAuthDbContext authContext)
+        public SQLAdminQCLotRepository(MedicalInformationDbContext dbContext)
         {
             this.dbContext = dbContext;
-            this.authContext = authContext;
         }
+
         public async Task<AdminQCLot> CreateQCLotAsync(AdminQCLot qclot)
         {
-            var activeQCLot = await dbContext.AdminQCLots.Where(item => item.Department == qclot.Department && item.QCName.ToLower() == qclot.QCName.ToLower() && item.IsActive).FirstOrDefaultAsync();
+            // Original team rule, kept: only one active lot per QC name per department. Opening a new lot
+            // closes the previous one, the way a lab rolls over to a new lot of control material.
+            var name = qclot.QCName.ToLower();
+            var activeQCLot = await dbContext.AdminQCLots
+                .Where(item => item.Department == qclot.Department && item.QCName.ToLower() == name && item.IsActive)
+                .FirstOrDefaultAsync();
 
-            if (activeQCLot != null)
+            if (activeQCLot != null && qclot.IsActive)
             {
                 activeQCLot.IsActive = false;
-                activeQCLot.ClosedDate = DateTime.Now;
-                dbContext.Update(activeQCLot);
+                activeQCLot.ClosedDate = DateTime.UtcNow;
             }
 
             await dbContext.AdminQCLots.AddAsync(qclot);
@@ -35,73 +37,99 @@ namespace ScrumDumpsterMolecularDiagnostic.Repositories.SQLImplementation
 
         public async Task<AdminQCLot?> DeleteQCLotAsync(Guid id)
         {
-            var exisitingQCLot = await dbContext.AdminQCLots.FirstOrDefaultAsync(item => item.AdminQCLotID == id);
+            var existing = await dbContext.AdminQCLots.FirstOrDefaultAsync(item => item.AdminQCLotID == id);
+            if (existing == null) return null;
 
-            if (exisitingQCLot == null) { return null; }
-
-            dbContext.AdminQCLots.Remove(exisitingQCLot);
+            dbContext.AdminQCLots.Remove(existing);
             await dbContext.SaveChangesAsync();
-
-            return exisitingQCLot;
+            return existing;
         }
 
-        public async Task<AdminQCLot?> DoesLotNumberExist(AdminQCLot qcLot)
-        {
-            return await dbContext.AdminQCLots.FirstOrDefaultAsync(item => item.LotNumber == qcLot.LotNumber);
-        }
+        public Task<bool> LotNumberExistsAsync(string lotNumber) =>
+            dbContext.AdminQCLots.AnyAsync(item => item.LotNumber == lotNumber);
 
         public async Task<AdminQCLot?> GetAdminQCLotByNameAsync(string? name, Department? dep)
         {
-            var QCLot = dbContext.AdminQCLots.AsQueryable();
-
-            if (!string.IsNullOrEmpty(name) && dep != null && Enum.IsDefined(typeof(Department), dep))
+            var query = dbContext.AdminQCLots.Where(item => item.IsActive);
+            if (!string.IsNullOrEmpty(name))
             {
-                QCLot = QCLot.Where(item => item.QCName.ToLower() == name.ToLower() && item.Department == dep && item.IsActive);
+                var lowered = name.ToLower();
+                query = query.Where(item => item.QCName.ToLower() == lowered);
             }
-
-            return await QCLot.Include(item => item.Analytes).FirstOrDefaultAsync();
+            if (dep != null)
+            {
+                query = query.Where(item => item.Department == dep);
+            }
+            return await query.Include(item => item.Analytes).FirstOrDefaultAsync();
         }
 
-        public async Task<List<AdminQCLot>> GetAllQCLotsAsync()
+        public async Task<List<AdminQCLot>> GetAllQCLotsAsync(bool activeOnly = false)
         {
-            return await dbContext.AdminQCLots.Include(item => item.Analytes).Include(item => item.Reports).ToListAsync();
+            var query = dbContext.AdminQCLots.AsNoTracking().Include(item => item.Analytes).Include(item => item.Reports).AsQueryable();
+            if (activeOnly) query = query.Where(l => l.IsActive);
+            var lots = await query.AsSplitQuery().ToListAsync();
+            return lots.OrderBy(l => l.Department).ThenBy(l => l.QCName).ThenByDescending(l => l.OpenDate).ToList();
         }
 
         public async Task<AdminQCLot?> GetQCLotByIDAsync(Guid id)
         {
-            return await dbContext.AdminQCLots.Include(item => item.Analytes).Include(item => item.Reports).FirstOrDefaultAsync(item => item.AdminQCLotID == id);
+            return await dbContext.AdminQCLots
+                .Include(item => item.Analytes)
+                .Include(item => item.Reports)
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(item => item.AdminQCLotID == id);
         }
 
         public async Task<AdminQCLot?> UpdateQCLotAsync(Guid lotId, AdminQCLot qcLot)
         {
-            var existingQCLot = await dbContext.AdminQCLots.Include(e => e.Analytes).FirstOrDefaultAsync(item => item.AdminQCLotID == lotId);
+            var existing = await dbContext.AdminQCLots.Include(e => e.Analytes)
+                .FirstOrDefaultAsync(item => item.AdminQCLotID == lotId);
+            if (existing == null) return null;
 
-            if (existingQCLot == null)
+            existing.QCName = qcLot.QCName;
+            existing.Department = qcLot.Department;
+            existing.OpenDate = qcLot.OpenDate;
+            existing.ExpirationDate = qcLot.ExpirationDate;
+            existing.ClosedDate = qcLot.ClosedDate;
+            existing.FileDate = qcLot.FileDate;
+            existing.IsActive = qcLot.IsActive;
+
+            var incomingIds = qcLot.Analytes.Where(a => a.AnalyteID != Guid.Empty).Select(a => a.AnalyteID).ToHashSet();
+
+            // Remove analytes that are no longer listed.
+            foreach (var removed in existing.Analytes.Where(a => !incomingIds.Contains(a.AnalyteID)).ToList())
             {
-                return null;
+                existing.Analytes.Remove(removed);
+                dbContext.Analytes.Remove(removed);
             }
-
-            existingQCLot.ExpirationDate = qcLot.ExpirationDate;
-            existingQCLot.OpenDate = qcLot.OpenDate;
-            existingQCLot.ClosedDate = qcLot.ClosedDate;
-            existingQCLot.FileDate = qcLot.FileDate;
 
             foreach (var analyte in qcLot.Analytes)
             {
-                var existingAnalyte = existingQCLot.Analytes.SingleOrDefault(item => item.AnalyteName == analyte.AnalyteName);
+                var match = analyte.AnalyteID == Guid.Empty
+                    ? null
+                    : existing.Analytes.SingleOrDefault(item => item.AnalyteID == analyte.AnalyteID);
 
-                if (existingAnalyte != null)
+                if (match == null)
                 {
-                    existingAnalyte.MaxLevel = analyte.MaxLevel;
-                    existingAnalyte.MinLevel = analyte.MinLevel;
-                    existingAnalyte.UnitOfMeasure = analyte.UnitOfMeasure;
-                    existingAnalyte.Mean = analyte.Mean;
+                    analyte.AnalyteID = Guid.NewGuid();
+                    analyte.AdminQCLotID = existing.AdminQCLotID;
+                    existing.Analytes.Add(analyte);
+                    dbContext.Analytes.Add(analyte);
+                }
+                else
+                {
+                    match.AnalyteName = analyte.AnalyteName;
+                    match.AnalyteAcronym = analyte.AnalyteAcronym;
+                    match.UnitOfMeasure = analyte.UnitOfMeasure;
+                    match.MinLevel = analyte.MinLevel;
+                    match.MaxLevel = analyte.MaxLevel;
+                    match.Mean = analyte.Mean;
+                    match.StdDevi = analyte.StdDevi; // previously never updated
                 }
             }
 
             await dbContext.SaveChangesAsync();
-
-            return existingQCLot;
+            return existing;
         }
     }
 }

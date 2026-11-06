@@ -18,7 +18,9 @@ namespace ScrumDumpsterMolecularDiagnostic.Repositories.LocalImplementation
         }
         public async Task<Images> Upload(Images image)
         {
-            var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", $"{image.FileName}{image.FileExtension}");
+            var folder = Path.Combine(webHostEnvironment.ContentRootPath, "Images");
+            Directory.CreateDirectory(folder);
+            var localFilePath = Path.Combine(folder, $"{image.FileName}{image.FileExtension}");
 
             // Upload Image to local path
             using var stream = new FileStream(localFilePath, FileMode.Create);

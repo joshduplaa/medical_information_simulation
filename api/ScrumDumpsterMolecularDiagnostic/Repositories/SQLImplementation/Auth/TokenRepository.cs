@@ -1,4 +1,4 @@
-﻿using ScrumDumpsterMolecularDiagnostic.Repositories.Interfaces;
+using ScrumDumpsterMolecularDiagnostic.Auth;
 using ScrumDumpsterMolecularDiagnostic.Repositories.Interfaces.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -8,7 +8,6 @@ using System.Text;
 
 namespace ScrumDumpsterMolecularDiagnostic.Repositories.SQLImplementation.Auth
 {
-
     public class TokenRepository : ITokenRepository
     {
         private readonly IConfiguration appconfig;
@@ -17,44 +16,31 @@ namespace ScrumDumpsterMolecularDiagnostic.Repositories.SQLImplementation.Auth
         {
             this.appconfig = appconfig;
         }
-        public string CreateJWTToken(IdentityUser user, List<string> roles)
+
+        public string CreateJWTToken(IdentityUser user, List<string> roles, Guid profileId, string displayName)
         {
-            var claims = new List<Claim>();
-
-            claims.Add(new Claim(ClaimTypes.Name, user.UserName));
-            
-            foreach (var role in roles)
+            var claims = new List<Claim>
             {
-                claims.Add(new Claim(ClaimTypes.Role, role));
-            }
+                new(JwtRegisteredClaimNames.Sub, user.Id),
+                new(ClaimTypes.Name, user.UserName ?? ""),
+                new(ClaimTypes.GivenName, displayName),
+                new(ClaimNames.ProfileId, profileId.ToString()),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            };
+            claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(appconfig["Jwt:Key"]));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(appconfig["Jwt:Key"]!));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var lifetime = TimeSpan.FromMinutes(appconfig.GetValue("Jwt:LifetimeMinutes", 480));
 
             var token = new JwtSecurityToken(
                 issuer: appconfig["Jwt:Issuer"],
                 audience: appconfig["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddDays(1),
-                signingCredentials: credentials
-            );
+                expires: DateTime.UtcNow.Add(lifetime),
+                signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        public bool IsTokenValid(string token)
-        {
-            JwtSecurityToken jwtSecurityToken;
-            try
-            {
-                jwtSecurityToken = new JwtSecurityToken(token);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-
-            return jwtSecurityToken.ValidTo > DateTime.UtcNow;
         }
     }
 }

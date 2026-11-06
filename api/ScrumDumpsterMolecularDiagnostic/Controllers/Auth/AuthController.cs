@@ -1,8 +1,9 @@
-﻿using ScrumDumpsterMolecularDiagnostic.Models.Domain;
+using Microsoft.AspNetCore.RateLimiting;
+using ScrumDumpsterMolecularDiagnostic.Auth;
 using ScrumDumpsterMolecularDiagnostic.Models.DTO.Auth;
-using ScrumDumpsterMolecularDiagnostic.Repositories.Interfaces;
 using ScrumDumpsterMolecularDiagnostic.Repositories.Interfaces.Auth;
-using Microsoft.AspNetCore.Http;
+using ScrumDumpsterMolecularDiagnostic.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
@@ -15,157 +16,94 @@ namespace ScrumDumpsterMolecularDiagnostic.Controllers.Auths
     {
         private readonly UserManager<IdentityUser> userManager;
         private readonly ITokenRepository tokenRepository;
-        private readonly IAdminRepository adminRepository;
-        private readonly IStudentRepository studentRepository;
+        private readonly AccountService accountService;
 
-        public AuthController(UserManager<IdentityUser> userManager, ITokenRepository tokenRepository, IAdminRepository adminRepository, IStudentRepository studentRepository)
+        public AuthController(UserManager<IdentityUser> userManager, ITokenRepository tokenRepository, AccountService accountService)
         {
             this.userManager = userManager;
             this.tokenRepository = tokenRepository;
-            this.adminRepository = adminRepository;
-            this.studentRepository = studentRepository;
+            this.accountService = accountService;
         }
 
-        [HttpPost]
-        [Route("Register")]
+        /// <summary>Public self-registration. Always creates a Student account.</summary>
+        [HttpPost("Register")]
+        [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Auth)]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDTO requestDTO)
         {
-            var identityUser = new IdentityUser
-            {
-                UserName = requestDTO.Username,
-                Email = requestDTO.Email,
-            };
-
-            var identityResult = await userManager.CreateAsync(identityUser, requestDTO.Password);
-
-            Console.WriteLine(identityResult);
-
-            if (identityResult.Succeeded)
-            {
-                if (requestDTO.Roles != null && requestDTO.Roles.Any())
-                {
-                    identityResult = await userManager.AddToRolesAsync(identityUser, requestDTO.Roles);
-
-                    if (identityResult.Succeeded)
-                    {
-                        if (requestDTO.Roles.Contains("Admin"))
-                        {
-                            var newUser = new Admin
-                            {
-                                Username = requestDTO.Username,
-                                Email = requestDTO.Email,
-                                Firstname = requestDTO.Firstname,
-                                Lastname = requestDTO.Lastname,
-                                Initials = requestDTO.Initials,
-                                Students = new List<Student>()
-                            };
-
-                            await adminRepository.CreateAdminAsync(newUser);
-                        } else if (requestDTO.Roles.Contains("Student"))
-                        {
-                            var newUser = new Student
-                            {
-                                Username = requestDTO.Username,
-                                Email = requestDTO.Email,
-                                Firstname = requestDTO.Firstname,
-                                Lastname = requestDTO.Lastname,
-                                Initials = requestDTO.Initials,
-                                Admins = new List<Admin>()
-                            };
-
-                            await studentRepository.CreateStudentAsync(newUser);
-                        }
-
-                        return Ok("User successfully registered");
-                    }
-                }
-            }
-
-            return BadRequest("Something went wrong!");
+            var result = await accountService.CreateAsync(requestDTO, Roles.Student);
+            if (!result.Succeeded) return ValidationFailure(result.Errors);
+            return Ok(new { message = "Account created. You can now sign in.", userId = result.ProfileId });
         }
 
-        [HttpPost]
-        [Route("LoginByUsername")]
-        public async Task<IActionResult> LoginByUsername([FromBody] LoginByUsernameRequestDTO loginDTO)
+        /// <summary>Faculty create other faculty accounts.</summary>
+        [HttpPost("RegisterFaculty")]
+        [Authorize(Roles = Roles.Faculty)]
+        public async Task<IActionResult> RegisterFaculty([FromBody] RegisterRequestDTO requestDTO)
         {
-            var user = await userManager.FindByNameAsync(loginDTO.Username);
+            var result = await accountService.CreateAsync(requestDTO, Roles.Faculty);
+            if (!result.Succeeded) return ValidationFailure(result.Errors);
+            return Ok(new { message = "Faculty account created.", userId = result.ProfileId });
+        }
 
-            if (user != null)
+        /// <summary>Sign in with username or email. Returns a JWT for the Authorization: Bearer header.</summary>
+        [HttpPost("Login")]
+        [HttpPost("LoginByUsername")] // route used by the original client
+        [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Auth)]
+        public async Task<IActionResult> Login([FromBody] LoginRequestDTO loginDTO)
+        {
+            var user = loginDTO.Username.Contains('@')
+                ? await userManager.FindByEmailAsync(loginDTO.Username)
+                : await userManager.FindByNameAsync(loginDTO.Username);
+
+            // One generic message for every failure so the endpoint does not reveal which accounts exist.
+            var invalid = Unauthorized(new ProblemDetails { Title = "Invalid username or password.", Status = 401 });
+            if (user == null) return invalid;
+
+            if (await userManager.IsLockedOutAsync(user))
+                return Unauthorized(new ProblemDetails { Title = "Account temporarily locked after repeated failed sign-ins. Try again later.", Status = 401 });
+
+            if (!await userManager.CheckPasswordAsync(user, loginDTO.Password))
             {
-                var isPasswordCorrect = await userManager.CheckPasswordAsync(user, loginDTO.Password);
-
-                if (isPasswordCorrect)
-                {
-                    // Create Token
-                    var roles = await userManager.GetRolesAsync(user);
-
-                    if (roles != null && roles.Any())
-                    {
-                        if (roles.Contains("Admin"))
-                        {
-                            var savedUser = await adminRepository.GetAdminByNameAsync(loginDTO.Username);
-
-                            if (savedUser != null)
-                            {
-                                var token = tokenRepository.CreateJWTToken(user, roles.ToList());
-
-                                var response = new LoginResponseDTO
-                                {
-                                    JwtToken = token,
-                                    UserID = savedUser.AdminID,
-                                    Roles = roles.ToList(),
-                                };
-
-                                var cookieOptions = new CookieOptions
-                                {
-                                    HttpOnly = true,
-                                    Secure = true,
-                                    SameSite = SameSiteMode.None,
-                                    Expires = DateTime.UtcNow.AddMinutes(30),
-                                };
-
-                                Response.Cookies.Append("jwtToken", token, cookieOptions);
-
-                                return Ok(response);
-                            }
-                        }
-                        
-                        else if (roles.Contains("Student"))
-                        {
-                            var savedUser = await studentRepository.GetStudentByNameAsync(loginDTO.Username);
-
-                            if (savedUser != null)
-                            {
-                                var token = tokenRepository.CreateJWTToken(user, roles.ToList());
-
-                                var response = new LoginResponseDTO
-                                {
-                                    JwtToken = token,
-                                    UserID = savedUser.StudentID,
-                                    Roles = roles.ToList(),
-                                };
-
-                                var cookieOptions = new CookieOptions
-                                {
-                                    HttpOnly = true,
-                                    Secure = true,
-                                    SameSite = SameSiteMode.None,
-                                    Expires = DateTime.UtcNow.AddMinutes(30),
-                                };
-
-                                Response.Cookies.Append("jwtToken", token, cookieOptions);
-
-                                return Ok(response);
-                            }
-                        }
-                    }
-                    return BadRequest("Role invalid");
-                }
-
-                return BadRequest("Password incorrect");
+                await userManager.AccessFailedAsync(user);
+                return invalid;
             }
+            await userManager.ResetAccessFailedCountAsync(user);
 
-            return BadRequest("User does not exist");
+            var profile = await accountService.GetProfileAsync(user);
+            if (profile == null) return invalid;
+
+            var roles = (await userManager.GetRolesAsync(user)).ToList();
+            var token = tokenRepository.CreateJWTToken(user, roles, profile.UserID, $"{profile.Firstname} {profile.Lastname}".Trim());
+
+            return Ok(new LoginResponseDTO
+            {
+                JwtToken = token,
+                ExpiresAt = new JwtSecurityTokenHandler().ReadJwtToken(token).ValidTo,
+                User = profile,
+            });
+        }
+
+        /// <summary>The signed-in user's profile (used by the client to restore a session).</summary>
+        [HttpGet("Me")]
+        [Authorize]
+        public async Task<IActionResult> Me()
+        {
+            var user = await userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+            var profile = await accountService.GetProfileAsync(user);
+            return profile == null ? Unauthorized() : Ok(profile);
+        }
+
+        private IActionResult ValidationFailure(IReadOnlyList<string> errors)
+        {
+            var problem = new ValidationProblemDetails(new Dictionary<string, string[]> { [""] = errors.ToArray() })
+            {
+                Title = errors.FirstOrDefault() ?? "Registration failed.",
+                Status = 400,
+            };
+            return BadRequest(problem);
         }
     }
 }

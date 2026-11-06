@@ -1,21 +1,13 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace ScrumDumpsterMolecularDiagnostic.Models.DTO.Auth
 {
-    public class LoginByUsernameRequestDTO
+    public class LoginRequestDTO
     {
+        /// <summary>Username or email address.</summary>
         [Required]
         public string Username { get; set; }
-        [Required]
-        [DataType(DataType.Password)]
-        public string Password { get; set; }
-    }
 
-    public class LoginByEmailRequestDTO
-    {
-        [Required]
-        [DataType(DataType.EmailAddress)]
-        public string Email { get; set; }
         [Required]
         [DataType(DataType.Password)]
         public string Password { get; set; }

@@ -1,6 +1,0 @@
-@PuttinTheDinIt_HostAddress = http://localhost:5049
-
-GET {{PuttinTheDinIt_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
