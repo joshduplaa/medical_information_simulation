@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateLotDraft } from "./lotValidation";
+import { changedTargets, validateLotDraft } from "./lotValidation";
 import { passwordProblem } from "./password";
 import { summarize } from "./gradebook";
 import type { LotDraft, Report } from "../api";
@@ -46,5 +46,26 @@ describe("gradebook summarize", () => {
       { studentID: "a", name: "Ann", count: 2, average: 85.5, latest: "2026-01-02" },
       { studentID: "b", name: "Ben", count: 1, average: 70, latest: "2026-01-02" },
     ]);
+  });
+});
+
+describe("changedTargets", () => {
+  const saved = [{ analyteID: "na", analyteAcronym: "Na", mean: 140, stdDevi: 1.5 }];
+  const withNa = (mean: number, stdDevi: number): LotDraft => ({ ...good, analytes: [{ ...good.analytes[0], analyteID: "na", mean, stdDevi }] });
+
+  it("is empty when targets are unchanged or analytes are new", () => {
+    expect(changedTargets(saved, withNa(140, 1.5))).toEqual([]);
+    expect(changedTargets(saved, good)).toEqual([]); // no analyteID → a new analyte, nothing to re-score
+  });
+
+  it("lists each changed mean and SD", () => {
+    expect(changedTargets(saved, withNa(141, 2))).toEqual([
+      { acronym: "Na", field: "mean", from: 140, to: 141 },
+      { acronym: "Na", field: "SD", from: 1.5, to: 2 },
+    ]);
+  });
+
+  it("ignores a field that is mid-edit (blank)", () => {
+    expect(changedTargets(saved, withNa(NaN, 1.5))).toEqual([]);
   });
 });

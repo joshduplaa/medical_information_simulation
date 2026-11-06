@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  Alert, Box, Button, FormControlLabel, Grid2 as Grid, IconButton, MenuItem, Paper, Stack, Switch, Table, TableBody,
+  Alert, AlertTitle, Box, Button, Checkbox, FormControlLabel, Grid2 as Grid, IconButton, MenuItem, Paper, Stack, Switch, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Typography,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -10,7 +10,7 @@ import { api, DEPARTMENTS, type AnalyteDraft, type LotDraft, type QcLot } from "
 import { ErrorState, Loading } from "../components/PageState";
 import { departmentLabel } from "../components/format";
 import PageHeader from "./PageHeader";
-import { validateLotDraft } from "../lib/lotValidation";
+import { changedTargets, validateLotDraft } from "../lib/lotValidation";
 
 /** The viewer's local calendar date as YYYY-MM-DD (toISOString would give tomorrow's date on a US evening). */
 const localDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -47,6 +47,7 @@ export default function LotEditorPage() {
   const [problems, setProblems] = useState<string[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [ackRescore, setAckRescore] = useState(false);
 
   useEffect(() => {
     if (isNew) return;
@@ -67,10 +68,12 @@ export default function LotEditorPage() {
     }
   };
   const lockedIds = new Set(original && original.reportCount > 0 ? original.analytes.map((a) => a.analyteID) : []);
+  const retargets = original && original.reportCount > 0 ? changedTargets(original.analytes, draft) : [];
 
   async function save(e: FormEvent) {
     e.preventDefault();
     const found = validateLotDraft(draft, isNew);
+    if (retargets.length > 0 && !ackRescore) found.push("Confirm that changing the targets should re-score this lot's existing runs.");
     setProblems(found);
     setSaveError(null);
     if (found.length) return;
@@ -103,6 +106,20 @@ export default function LotEditorPage() {
       {(problems.length > 0 || saveError) && (
         <Alert severity="error" sx={{ mb: 2 }} role="alert">
           {saveError ?? <ul style={{ margin: 0, paddingLeft: 18 }}>{problems.map((p) => <li key={p}>{p}</li>)}</ul>}
+        </Alert>
+      )}
+      {retargets.length > 0 && original && (
+        <Alert severity="warning" sx={{ mb: 2 }} role="status">
+          <AlertTitle>Changing targets re-scores {original.reportCount} existing run{original.reportCount === 1 ? "" : "s"}</AlertTitle>
+          {retargets.map((c) => `${c.acronym} ${c.field} ${c.from} → ${c.to}`).join(" · ")}. Z-scores, Westgard checks and
+          Levey-Jennings limits for every run on this lot, including graded ones, will use the new values. To keep history as
+          it was, create a new lot instead.
+          <Box>
+            <FormControlLabel
+              control={<Checkbox checked={ackRescore} onChange={(e) => setAckRescore(e.target.checked)} />}
+              label="I understand — re-score existing runs"
+            />
+          </Box>
         </Alert>
       )}
       <Paper sx={{ p: 3, mb: 3 }}>

@@ -102,7 +102,9 @@ This is documented in the code and the README.
 
 **D19. Lots with runs can't be deleted (409), and their analytes can't be removed. Deactivate them instead.**
 Deleting would orphan graded work. Editing mean and SD is allowed, because correcting a target is a real lab
-action, but it re-scores history. That's a known simplification: real labs version their targets.
+action, but it re-scores history. That's a known simplification: real labs version their targets. As a safeguard, the editor
+names each changed mean or SD on a lot with runs and requires an explicit acknowledgment before saving. It suggests a
+new lot when history should be preserved.
 
 ## Demo and deployment
 

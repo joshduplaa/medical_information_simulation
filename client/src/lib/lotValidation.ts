@@ -22,3 +22,20 @@ export function validateLotDraft(d: LotDraft, isNew: boolean): string[] {
   });
   return problems;
 }
+
+export interface TargetChange { acronym: string; field: "mean" | "SD"; from: number; to: number }
+
+/**
+ * Analytes whose target mean or SD differs from the saved lot. Westgard checks and Levey-Jennings limits are always
+ * computed from the lot's current targets, so on a lot that already has runs these changes re-score its history.
+ */
+export function changedTargets(saved: { analyteID: string; analyteAcronym: string; mean: number; stdDevi: number }[], draft: LotDraft): TargetChange[] {
+  const changes: TargetChange[] = [];
+  for (const a of draft.analytes) {
+    const before = saved.find((s) => s.analyteID === a.analyteID);
+    if (!before) continue;
+    if (Number.isFinite(a.mean) && a.mean !== before.mean) changes.push({ acronym: before.analyteAcronym, field: "mean", from: before.mean, to: a.mean });
+    if (Number.isFinite(a.stdDevi) && a.stdDevi !== before.stdDevi) changes.push({ acronym: before.analyteAcronym, field: "SD", from: before.stdDevi, to: a.stdDevi });
+  }
+  return changes;
+}
