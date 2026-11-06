@@ -103,7 +103,7 @@ labels' contrast by hand.
 
 ## Honest limitations to mention before they're asked
 
-- No faculty-creation UI and no password reset.
+- No password reset or email. (Faculty can create other faculty accounts from the Account page.)
 - Rules are computed client-side only, and rejections don't block submission.
 - Editing a lot's mean or SD re-scores its history. Real labs version their targets.
 - The live demo is browser-only. The full stack runs locally with Docker.

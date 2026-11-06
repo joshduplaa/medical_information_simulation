@@ -1,12 +1,13 @@
-# Handoff: `finish-mis`
+# Handoff: MIS
 
 The state of the branch for whoever picks it up next (most likely Joshua after the 5-hour session). This is kept
 current. The work log is [WORKLOG.md](WORKLOG.md).
 
 ## Where things are
 
-- **Branch:** `finish-mis` on `joshduplaa/medical_information_simulation`, pushed. `main` is untouched. Nothing was
-  merged, and no history was rewritten.
+- **Branch:** `main` on `joshduplaa/medical_information_simulation`. The `finish-mis` work was merged into `main`
+  through [PR #1](https://github.com/joshduplaa/medical_information_simulation/pull/1) (merge commit `3294c43`, Nov 5
+  2026). The `finish-mis` branch is kept for reference. No history was rewritten.
 - **CI:** GitHub Actions `CI` workflow on every push. It runs the API build and tests, client typecheck, lint, unit
   tests and both builds, and the Playwright E2E suite. Older runs show as *cancelled* because the workflow uses a
   concurrency group with cancel-in-progress.
@@ -34,7 +35,7 @@ current. The work log is [WORKLOG.md](WORKLOG.md).
 ## How to resume
 
 ```bash
-cd ~/professional/medical_information_simulation && git switch finish-mis && git pull
+cd ~/professional/medical_information_simulation && git switch main && git pull
 scripts/dev-setup.sh && docker compose up -d --wait
 (cd api/ScrumDumpsterMolecularDiagnostic && dotnet run --launch-profile http)   # :5029
 (cd client && npm ci && npm run dev)                                            # :5173
@@ -50,9 +51,9 @@ before `dotnet` or `npm run e2e`.
 ## Portfolio
 
 - Live: https://joshuaduplaaswe.web.app/Projects/MedicalInformationSimulation (verified at 18:05).
-- **Merge PR https://github.com/joshduplaa/JoshuaDuplaaPortfolioWebsite/pull/9 before the next portfolio deploy
-  from `main`**, or that deploy reverts the MIS update. Then remove the worktree:
-  `git -C ~/professional/JoshuaDuplaaPortfolioWebsite worktree remove .worktrees/mis`.
+- The case study was merged into the portfolio's `main` through
+  [PR #9](https://github.com/joshduplaa/JoshuaDuplaaPortfolioWebsite/pull/9), and the site was redeployed from `main`.
+  Its code links point to this repository's `main`.
 
 ## Must know
 
@@ -74,4 +75,3 @@ The full list is in README → *Known gaps* and the WORKLOG backlog. Highlights:
 4. There is no password reset or email.
 5. To host the real API you'd need a server and database (not done: no paid resources). The client only needs
    `VITE_API_BASE_URL` set at build time.
-6. Optionally open a PR `finish-mis → main` on the fork for review. It was deliberately not done in this session.

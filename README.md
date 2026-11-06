@@ -8,7 +8,7 @@ rule evaluation. Faculty then review, grade or return each run, and the grades a
 > the demo is synthetic.
 
 It started as a team capstone at Texas Tech University Health Sciences Center ("Medical Information Simulation
-website for the TTU HSC"). This branch (`finish-mis`) completes the core workflow end to end. See
+website for the TTU HSC"). The `finish-mis` work, now merged into `main`, completes the core workflow end to end. See
 [Credits](#credits) for who built what.
 
 **Live demo (runs in your browser, no server):** https://scrumdumpstersmis.web.app
