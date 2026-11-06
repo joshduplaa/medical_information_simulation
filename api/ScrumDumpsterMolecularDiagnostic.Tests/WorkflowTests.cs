@@ -172,4 +172,24 @@ public class WorkflowTests : IClassFixture<MisApiFactory>
         var response = await student.PostAsJsonAsync("/api/Reports", new { adminQCLotID = lot.GetProperty("adminQCLotID").GetGuid() });
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
+    [Fact]
+    public async Task Run_dates_round_trip_as_utc_without_drift()
+    {
+        var faculty = await factory.Faculty();
+        var created = await faculty.PostAsJsonAsync("/api/AdminQCLots", LotBody("LIPID-TEST-UTC1"));
+        var lotId = (await Json(created)).GetProperty("adminQCLotID").GetGuid();
+
+        var student = await factory.Student();
+        var report = await Json(await student.PostAsJsonAsync("/api/Reports", new { adminQCLotID = lotId }));
+        var reportId = report.GetProperty("reportID").GetGuid();
+        // Regression: the API used to emit "2026-11-06T01:08:00" (no zone), which browsers read as local time.
+        Assert.EndsWith("Z", report.GetProperty("runDate").GetString());
+
+        var runDate = new DateTime(2026, 11, 5, 16, 30, 0, DateTimeKind.Utc);
+        await student.PutAsJsonAsync($"/api/Reports/{reportId}/results", new { inputs = Array.Empty<object>(), runDate });
+        var reloaded = await Json(await student.GetAsync($"/api/Reports/{reportId}"));
+        var text = reloaded.GetProperty("runDate").GetString()!;
+        Assert.EndsWith("Z", text);
+        Assert.Equal(runDate, DateTime.Parse(text, null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal));
+    }
 }

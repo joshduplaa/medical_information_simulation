@@ -118,11 +118,11 @@ export function buildDemoState(now = Date.now()): State {
     const shifts: Record<string, number> = {};
     if (d === 10 || d === 11) shifts.Glucose = 2.4; // planted 2-2s
     if (d === 6) shifts.Potassium = 3.3;            // planted 1-3s
-    addRun(alex, bmp1, today - (14 - d) * day + 8 * 3600e3, status, shifts, status === "InProgress" ? 0.5 : 1);
+    addRun(alex, bmp1, today - (14 - d) * day + 15 * 3600e3, status, shifts, status === "InProgress" ? 0.5 : 1);
   }
-  for (let d = 0; d < 6; d++) addRun(alex, sars, today - (6 - d) * day + 9 * 3600e3, d < 5 ? "Graded" : "Submitted");
-  for (let d = 0; d < 8; d++) addRun(jordan, bmp1, today - (8 - d) * day + 10 * 3600e3, d < 7 ? "Graded" : "Submitted");
-  for (let d = 0; d < 5; d++) addRun(sam, cbc, today - (5 - d) * day + 11 * 3600e3, d < 4 ? "Graded" : "Submitted");
+  for (let d = 0; d < 6; d++) addRun(alex, sars, today - (6 - d) * day + 16 * 3600e3, d < 5 ? "Graded" : "Submitted");
+  for (let d = 0; d < 8; d++) addRun(jordan, bmp1, today - (8 - d) * day + 17 * 3600e3, d < 7 ? "Graded" : "Submitted");
+  for (let d = 0; d < 5; d++) addRun(sam, cbc, today - (5 - d) * day + 18 * 3600e3, d < 4 ? "Graded" : "Submitted");
 
   return { users: [faculty, alex, jordan, sam], lots: [bmp1, bmp2, sars, sti, cbc, oldBmp], reports };
 }

@@ -102,7 +102,7 @@ namespace ScrumDumpsterMolecularDiagnostic.Data
             // potassium has one 1-3s outlier on run 6, so the Levey-Jennings charts have something to teach.
             for (var day = 0; day < 14; day++)
             {
-                var runDate = today.AddDays(-14 + day).AddHours(8);
+                var runDate = today.AddDays(-14 + day).AddHours(15);
                 var status = day switch { < 10 => ReportStatus.Graded, 10 or 11 => ReportStatus.Submitted, 12 => ReportStatus.Returned, _ => ReportStatus.InProgress };
                 var shifts = new Dictionary<string, double>();
                 if (day is 10 or 11) shifts["Glucose"] = 2.4;
@@ -110,12 +110,12 @@ namespace ScrumDumpsterMolecularDiagnostic.Data
                 AddRun(alex, bmp1, runDate, status, rng, shifts, status == ReportStatus.InProgress ? 0.5 : 1.0);
             }
             for (var day = 0; day < 6; day++)
-                AddRun(alex, sars, today.AddDays(-6 + day).AddHours(9), day < 5 ? ReportStatus.Graded : ReportStatus.Submitted, rng, new());
+                AddRun(alex, sars, today.AddDays(-6 + day).AddHours(16), day < 5 ? ReportStatus.Graded : ReportStatus.Submitted, rng, new());
 
             for (var day = 0; day < 8; day++)
-                AddRun(jordan, bmp1, today.AddDays(-8 + day).AddHours(10), day < 7 ? ReportStatus.Graded : ReportStatus.Submitted, rng, new());
+                AddRun(jordan, bmp1, today.AddDays(-8 + day).AddHours(17), day < 7 ? ReportStatus.Graded : ReportStatus.Submitted, rng, new());
             for (var day = 0; day < 5; day++)
-                AddRun(sam, cbc, today.AddDays(-5 + day).AddHours(11), day < 4 ? ReportStatus.Graded : ReportStatus.Submitted, rng, new());
+                AddRun(sam, cbc, today.AddDays(-5 + day).AddHours(18), day < 4 ? ReportStatus.Graded : ReportStatus.Submitted, rng, new());
 
             await db.SaveChangesAsync();
             logger.LogInformation("Seeded synthetic demo data (faculty '{Faculty}', student '{Student}').", FacultyUsername, StudentUsername);

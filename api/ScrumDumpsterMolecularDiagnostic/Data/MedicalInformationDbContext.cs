@@ -1,5 +1,6 @@
 using ScrumDumpsterMolecularDiagnostic.Models.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace ScrumDumpsterMolecularDiagnostic.Data
 {
@@ -16,6 +17,25 @@ namespace ScrumDumpsterMolecularDiagnostic.Data
         public DbSet<StudentReport> StudentReports { get; set; }
         public DbSet<AnalyteInput> AnalyteInputs { get; set; }
         public DbSet<Images> Images { get; set; }
+
+        /// <summary>
+        /// All timestamps are stored as UTC. SQL Server and SQLite hand DateTimes back with Kind=Unspecified, which
+        /// System.Text.Json serializes without a "Z"; browsers then parse them as local time and every save shifts
+        /// the run date by the UTC offset. Tagging values as UTC on read makes the API always emit ISO-8601 with "Z".
+        /// </summary>
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+        {
+            configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+            configurationBuilder.Properties<DateTime?>().HaveConversion<NullableUtcDateTimeConverter>();
+        }
+
+        private sealed class UtcDateTimeConverter() : ValueConverter<DateTime, DateTime>(
+            v => v.Kind == DateTimeKind.Local ? v.ToUniversalTime() : v,
+            v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
+        private sealed class NullableUtcDateTimeConverter() : ValueConverter<DateTime?, DateTime?>(
+            v => v.HasValue && v.Value.Kind == DateTimeKind.Local ? v.Value.ToUniversalTime() : v,
+            v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v);
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
